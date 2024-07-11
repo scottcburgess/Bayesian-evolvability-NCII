@@ -1,5 +1,5 @@
 # Bayesian-evolvability-NCII
-R code and data to produce the analyses and plots in the manuscipt Powell JA, Archer, FI, Burgess SC. Evolvability of larval dispersal traits in a marine invertebrate. 
+R code and data to produce the analyses and plots in the manuscipt Powell JA, Archer FI, Burgess SC. Evolvability of larval dispersal traits in a marine invertebrate. 
 
 Code run in R but requires the installation of JAGS (https://mcmc-jags.sourceforge.io/)
 
