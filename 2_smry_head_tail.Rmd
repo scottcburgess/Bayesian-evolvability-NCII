@@ -1,0 +1,133 @@
+---
+title: Head and Tail Length Variance Components
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  comment = NA,
+  fig.height = 3,
+  fig.width = 8
+)
+options(scipen = 10, digits = 3)
+
+rm(list = ls())
+library(tidyverse)
+library(runjags)
+load("head_tail_posterior_20230116_1944.rdata")
+source("0_misc_funcs.R")
+```
+
+## Run Summary
+
+Chains : `r length(post$mcmc)`  
+Burn-in : `r post$burnin`  
+Samples per chain : `r post$sample`  
+Total samples : `r post$sample * length(post$mcmc)`  
+Thinning : `r post$thin`   
+Duration: `r paste(round(elapsed, 1), units(elapsed))`  
+End Time: `r format(end, "%Y-%m-%d %H:%M")`   
+
+## Posterior Summary
+```{r, include=FALSE}
+smry <- summary(
+  post, 
+  vars = c(
+    "deviance", "additive.vcov", "maternal.vcov", 
+    "interaction.vcov", "resid.vcov"
+  )
+)
+```
+```{r}
+smry %>% 
+  as.data.frame() %>% 
+  pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
+```
+\newpage  
+
+## V~A~
+```{r}
+comp.smry(p$VA)
+plot.metric(p$VA)
+```
+
+## V~M~
+```{r}
+comp.smry(p$VM)
+plot.metric(p$VM)
+```
+\newpage  
+
+## V~D~
+```{r}
+comp.smry(p$VD)
+plot.metric(p$VD)
+```
+
+## V~P~
+```{r}
+comp.smry(p$VP)
+plot.metric(p$VP)
+```
+\newpage  
+
+## V~M~ / V~A~
+```{r}
+vm.va <- p$VM / p$VA
+comp.smry(vm.va, 1)
+plot.metric(vm.va) + scale_x_log10()
+```
+
+## V~D~ / V~A~
+```{r}
+vd.va <- p$VD / p$VA
+comp.smry(vd.va, 1)
+plot.metric(vd.va) + scale_x_log10()
+```
+\newpage  
+
+## Heritability
+```{r}
+comp.smry(p$H)
+plot.metric(p$H)
+```
+\newpage  
+
+## Evolvability
+```{r}
+comp.smry(p$E)
+
+p$E %>% 
+  t() %>% 
+  as.data.frame() %>% 
+  pivot_longer(everything()) %>% 
+  ggplot(aes(value)) +
+  geom_histogram(bins = 100) +
+  labs(x = "Value", y = "Count") +
+  facet_wrap(~ name, scales = "free")
+```
+
+## Tail / Head Evolvability
+```{r}
+e.ratio <- p$E[2, ] / p$E[1, ]
+
+e.ratio %>% 
+  log() %>% 
+  vecSmry() %>%
+  exp() %>% 
+  rbind() %>%
+  as.data.frame() %>%
+  pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
+
+data.frame(ratio = e.ratio) %>% 
+  ggplot(aes(ratio)) +
+  geom_histogram(bins = 100) +
+  scale_x_log10() +
+  labs(x = "Tail / Head Evolvability", y = "Count")
+```
