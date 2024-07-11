@@ -8,7 +8,12 @@ Bayesian analysis of Molgula occidentalis (ascidian) larval traits from a North 
 All code written by Eric Archer (https://github.com/EricArcher), except ###.
 
 Raw data in Moccidentalis All Traits.csv
+
 Model I = File names starting with 2
+
 Model II = File names starting with 4
+
 Model III = File names starting with 3
+
 Model IV = File names starting with 5
+
