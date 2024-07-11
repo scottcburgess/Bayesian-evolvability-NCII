@@ -3,7 +3,7 @@ R code and data to produce the analyses and plots in the manuscipt Powell JA, Ar
 
 Code run in R but requires the installation of JAGS (https://mcmc-jags.sourceforge.io/)
 
-Bayesian analysis of a North Carolina II breeding design.
+Bayesian analysis of Molgula occidentalis (ascidian) larval traits from a North Carolina II (NCII) breeding design.
 
 All code written by Eric Archer (https://github.com/EricArcher), except ###.
 
