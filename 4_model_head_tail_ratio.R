@@ -105,7 +105,7 @@ p$VA <- 4 * p$additive.var
 p$VM <- p$maternal.var
 p$VD <- 4 * p$interaction.var
 # p$VP <- p$VA + p$VM + p$VD
-p$VP <- 2 * p$additive.var + p$VM + p$interaction.var
+p$VP <- 2 * p$additive.var + p$VM + p$interaction.var + p$resid.var
 
 qgparams.post <- lapply(1:length(p$VA), function(i) {
   QGglmm::QGparams(
