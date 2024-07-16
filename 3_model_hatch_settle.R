@@ -149,7 +149,7 @@ qgparams.post <- sapply(dimnames(p$pr.overall)[[1]], function(m) {
     QGglmm::QGparams(
       var.a = p$VA[m, m, i],
       var.p = p$VP[m, m, i],
-      predict = swfscMisc::logOdds(p$pr.block[, m, i]),
+      predict = qlogis(p$pr.block[, m, i]),
       model = "binom1.logit",
       verbose = FALSE
     )
@@ -161,21 +161,34 @@ qgparams.post <- sapply(dimnames(p$pr.overall)[[1]], function(m) {
 p$H <- t(sapply(qgparams.post, function(x) x$h2.obs))
 p$E <- t(sapply(qgparams.post, function(x) x$E))
 
+# Compute evolvability using QGglmm to extract full variance/covariance matrix
+#   on observed scale
+vcv.G.obs <- parallel::mclapply(1:dim(p$VA)[3], function(i) {
+  QGglmm::QGmvparams(
+    vcv.G = p$VA[, , i],
+    vcv.P = p$VP[, , i],
+    predict = qlogis(p$pr.block[, , i]),
+    models = c('binom1.logit', 'Gaussian'),
+    verbose = FALSE
+  )$vcv.G.obs
+}, mc.cores = 10) 
+vcv.G.obs <- do.call(abind::abind, c(vcv.G.obs, list(along = 3)))
 
-e.params_BetaMCMC <- evolvability::evolvabilityBetaMCMC(
-  G_mcmc = t(apply(p$VA, 3, as.vector)),
-  Beta = evolvability::randomBeta(1000, 2),
-  post.dist = TRUE
-)
+# e.params_BetaMCMC <- evolvability::evolvabilityBetaMCMC(
+#   G_mcmc = t(apply(p$VA, 3, as.vector)),
+#   Beta = evolvability::randomBeta(1000, 2),
+#   post.dist = TRUE
+# )
 
 e.params_BetaMCMC <- evolvability::evolvabilityBetaMCMC(
   G_mcmc = evolvability::meanStdGMCMC(
-    t(apply(p$VA, 3, as.vector)),
+    t(apply(vcv.G.obs, 3, as.vector)),
     t(p$pr.overall)
   ),
   Beta = evolvability::randomBeta(1000, 2),
   post.dist = TRUE
 )
+
 
 # Save all objects and plot posterior summaries
 save.image(format(end, "hatch_settle_posterior_%Y%m%d_%H%M.rdata"))
