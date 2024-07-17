@@ -100,25 +100,21 @@ c.d <- sapply(dimnames(p$interaction.mean)[[2]], function(m) {
     scale_color_manual(values = effect.colors) +
     # scale_fill_manual(values = effect.colors) +
     annotate(
-      'label', 
+      'text', 
       x = -Inf, 
       y = -Inf, 
       label = paste('Additive Sire\n', smry[[1]], sep = '', collapse = ''),
-      fill=NA,
-      label.size=NA,
-      size=3,
+      size = 3,
       hjust = 0,
       vjust = 0,
       color = effect.colors['Additive Sire']
     ) +
     annotate(
-      'label', 
+      'text', 
       x = Inf, 
       y = -Inf, 
       label = paste('Maternal\n', smry[[2]], sep = '', collapse = ''),
-      fill=NA,
-      label.size=NA,
-      size=3,
+      size = 3,
       hjust = 1,
       vjust = 0,
       color = effect.colors['Maternal']
