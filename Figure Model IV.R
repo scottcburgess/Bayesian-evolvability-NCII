@@ -6,6 +6,10 @@ load('predict_settling_posterior_20230117_0038.rdata')
 
 pr.breaks <- seq(0, 1, length.out = 100)
 
+# Use line 10 or 11 just for viewing, but comment out when saving final pdf.
+# windows(width=4,height=4) # if on PC
+quartz(width=6,height=6) # if on Mac
+
 a.b <- sapply(dimnames(p$interaction.mean)[[2]], function(m) {
   int.breaks <- seq(
     floor(min(p$interaction.mean[, m, ])), 
@@ -49,10 +53,14 @@ a.b <- sapply(dimnames(p$interaction.mean)[[2]], function(m) {
       label = paste(
         paste0('median = ', round(median(p$int.beta[m, ]), 3), '\n'),
         paste0('mode = ', round(modeest::venter(p$int.beta[m, ]), 3), '\n'),
-        paste0('95% hdi = ', paste(round(HDInterval::hdi(p$int.beta[m, ]), 3), collapse = ' - ')),
+        paste0('95% = ', paste(round(HDInterval::hdi(p$int.beta[m, ]), 3), collapse = ' - ')),
         sep = '',
         collapse = ''
       ),
+      color="white",
+      fill=NA,
+      label.size=NA,
+      size=3,
       hjust = 0,
       vjust = 0
     ) +
@@ -71,13 +79,13 @@ a.b <- sapply(dimnames(p$interaction.mean)[[2]], function(m) {
 
 
 
-effect.colors <- c('Additive Sire' = 'blue', 'Maternal' = 'deeppink')
+effect.colors <- c('Additive Sire' = '#0081a7', 'Maternal' = '#f07167')
 c.d <- sapply(dimnames(p$interaction.mean)[[2]], function(m) {
   smry <- lapply(p[c('sire.beta', 'maternal.beta')], function(x) {
     paste(
       paste0('median = ', round(median(x[m, ]), 3), '\n'),
       paste0('mode = ', round(modeest::venter(x[m, ]), 3), '\n'),
-      paste0('95% hdi = ', paste(round(HDInterval::hdi(x[m, ]), 3), collapse = ' - ')),
+      paste0('95% = ', paste(round(HDInterval::hdi(x[m, ]), 3), collapse = ' - ')),
       sep = '',
       collapse = ''
     )
@@ -87,29 +95,35 @@ c.d <- sapply(dimnames(p$interaction.mean)[[2]], function(m) {
     filter(metric == m & effect.type %in% c('Additive Sire', 'Maternal')) |>  
     ggplot(aes(x = effect)) +
     geom_hline(yintercept = mean(model.data$settle[, 1]), linetype = 'dashed') +
-    geom_ribbon(aes(ymin = lower.hdi, ymax = upper.hdi, fill = effect.type), alpha = 0.5) +
+    # geom_ribbon(aes(ymin = lower.hdi, ymax = upper.hdi, fill = effect.type), alpha = 0.5) +
     geom_line(aes(y = median, color = effect.type), linewidth = 2) +  
     scale_color_manual(values = effect.colors) +
-    scale_fill_manual(values = effect.colors) +
+    # scale_fill_manual(values = effect.colors) +
     annotate(
-      'text', 
+      'label', 
       x = -Inf, 
       y = -Inf, 
       label = paste('Additive Sire\n', smry[[1]], sep = '', collapse = ''),
+      fill=NA,
+      label.size=NA,
+      size=3,
       hjust = 0,
       vjust = 0,
       color = effect.colors['Additive Sire']
     ) +
     annotate(
-      'text', 
+      'label', 
       x = Inf, 
       y = -Inf, 
       label = paste('Maternal\n', smry[[2]], sep = '', collapse = ''),
+      fill=NA,
+      label.size=NA,
+      size=3,
       hjust = 1,
       vjust = 0,
       color = effect.colors['Maternal']
     ) +
-    coord_cartesian(xlim = c(-10, 10), ylim = c(0, 1), expand = FALSE) +
+    coord_cartesian(xlim = c(-15, 15), ylim = c(0, 1), expand = FALSE) +
     labs(
       x = paste0('Marginal effect (', m, ' length)'), 
       y = 'Probability of settling',
