@@ -5,7 +5,7 @@ Bayesian analysis of *Molgula occidentalis* (ascidian) larval traits from a Nort
 The repository contains R code and data to produce the analyses and plots in the manuscipt Powell JA, Archer FI, Burgess SC. Evolvability of larval dispersal traits in a marine invertebrate. <br />
 
 ### R Package Dependencies
-`rjags` and local installation of JAGS (https://mcmc-jags.sourceforge.io/) <br />
+`rjags` and local installation of [JAGS](https://mcmc-jags.sourceforge.io/) <br />
 `evolvability` <br />
 `QGglmm` <br />
 `swfscMisc` <br />
