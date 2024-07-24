@@ -1,4 +1,5 @@
 library('dplyr')
+source('0_misc_funcs.R')
 
 # Load data
 load("head_tail_posterior_20230116_1944.rdata") 
@@ -16,66 +17,6 @@ cB_posterior_head_tail <- apply(e.params_BetaMCMC_head_tail$post.dist$cB, 1, mea
 eB_posterior_hatch_settle <- apply(e.params_BetaMCMC_hatch_settle$post.dist$eB, 1, mean)
 rB_posterior_hatch_settle <- apply(e.params_BetaMCMC_hatch_settle$post.dist$rB, 1, mean)
 cB_posterior_hatch_settle <- apply(e.params_BetaMCMC_hatch_settle$post.dist$cB, 1, mean)
-
-# Function to summarize vectors
-vecSmry <- function(x) {      
-  setNames(
-    c(median(x), modeest::mlv(x, method = "venter"), HDInterval::hdi(x)),
-    c("median", "mode", "lower.hdi", "upper.hdi")
-  )[c("lower.hdi", "median", "mode", "upper.hdi")]
-}
-
-####### Function to make plot of posterior
-plot.posterior <- function(x,bar.width,xlims,cols,trait.plot){
-  # For testing
-  # x <- eB_posterior_head_tail # data to plot
-  # bar.width = 0.0001 # width of the bars in the histogram
-  # xlims <- c(0,0.001)
-  # cols = "dodgerblue" # color of the bars to plot
-  # trait.plot = "e_mean" # What trait to plot from summary_dat
-  summary.matrix = vecSmry(x)
-  blims <- max(abs(x))*2
-  brks <- seq(-blims,blims,by=bar.width)
-  foo <- hist(x, breaks=brks,plot=F)
-  d <- data.frame(x=foo$mids, y=foo$density)
-  d <- d %>% filter(y>0)
-  ylims <- c(0,max(d$y))
-
-  plot(xlims,ylims,type="n",bty="l",ylab="",xlab="",axes=F)
-
-  interval <- as.numeric(round(summary.matrix[c("lower.hdi","upper.hdi")],6))
-  
-  with(d,segments(x,
-                  rep(0,length(x)),
-                  x,
-                  y,
-                  lend=2,
-                  col=ifelse(d$x > interval[1] & d$x < interval[2],
-                             cols[1],cols[2])))
-  
-  abline(v=0)
-# Add summaries to plot
-  median.text <- eval(paste("median = ",round(summary.matrix["median"],6)))
-  mode.text <- eval(paste("mode = ",round(summary.matrix["mode"],6)))  
-  int.text <- eval(paste("95% hdi = ",interval[1], " - ", interval[2],sep=""))  
-  
-  # title <- ifelse(grepl("e_",trait.plot),expression(paste("e",beta)),
-  #                 ifelse(grepl("r_",trait.plot),expression(paste("r",beta)),
-  #                        expression(paste("c",beta))))
-  
-
-  legend(xlims[2]*0.9,ylims[2],
-         legend=rbind(median.text,mode.text,int.text),
-         bty="n",
-         adj=1,
-         # title=title,
-         # title.adj=0,
-         xpd=T)
-}
-###################################################
-
-
-
 
 
 ################# Make Figure ################

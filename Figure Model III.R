@@ -1,15 +1,8 @@
 library('dplyr')
+source('0_misc_funcs.R')
 
 # Load data
 load("hatch_settle_posterior_20230119_1741.rdata") 
-
-# Function to summarize posteriors
-vecSmry <- function(x) {      
-  setNames(
-    c(mean(x),median(x), modeest::mlv(x, method = "venter"), HDInterval::hdi(x)),
-    c("mean", "median", "mode", "lower.hdi", "upper.hdi")
-  )[c("lower.hdi", "mean", "median", "mode", "upper.hdi")]
-}
 
 ######## Summary stats of the posteriors for variance components ##############
 summary_dat <- as.data.frame(rbind(vecSmry(p$additive.vcov[1,1,]),

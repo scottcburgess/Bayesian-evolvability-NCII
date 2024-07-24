@@ -154,7 +154,7 @@ post <- run.jags(
 end <- Sys.time()
 elapsed <- swfscMisc::autoUnits(post$timetaken)
 
-p <- myFuncs::runjags2list(post)
+p <- swfscMisc::runjags2list(post)
 dimnames(p$intercept)[[1]] <- 
   dimnames(p$int.beta)[[1]] <-
   dimnames(p$sire.beta)[[1]] <-

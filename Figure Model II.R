@@ -1,15 +1,8 @@
 library('dplyr')
+source('0_misc_funcs.R')
 
 # Load data
 load("ratio_posterior_20230117_0903.rdata") 
-
-# Function to summarize posteriors
-vecSmry <- function(x) {      
-  setNames(
-    c(mean(x),median(x), modeest::mlv(x, method = "venter"), HDInterval::hdi(x)),
-    c("mean", "median", "mode", "lower.hdi", "upper.hdi")
-  )[c("lower.hdi", "mean", "median", "mode", "upper.hdi")]
-}
 
 ######## Summary stats of the posteriors for variance components ##############
 summary_dat <- as.data.frame(rbind(vecSmry(p$additive.var),
@@ -28,62 +21,6 @@ summary_dat <- as.data.frame(rbind(vecSmry(p$additive.var),
                                          'E'))
 summary_dat <- round(summary_dat,7)
 ############################################
-
-
-####### Function to make plot of posterior
-plot.posterior <- function(x,bar.width,xlims,cols,trait.plot,trait.summary){
-  # x <- p$additive # data to plot
-  # x <- qgparams.post$var.a.obs # data to plot
-  # bar.width = 0.00001 # width of the bars in the histogram
-  # cols = "dodgerblue" # color of the bars to plot
-  # trait.plot = "VA" # What trait to plot from summary_dat
-  # trait.summary = "VA" # What trait to summarize in the legend
-  # xlims = c(0,0.003)
-  blims <- max(abs(x))*2
-  brks <- seq(-blims,blims,by=bar.width)
-  foo <- hist(x, breaks=brks,plot=F)
-  d <- data.frame(x=foo$mids, y=foo$density)
-  d <- d %>% filter(y>0)
-  ylims <- c(0,max(d$y))
-
-  plot(xlims,ylims,type="n",bty="l",ylab="",xlab="",axes=F)
-
-  interval <- as.numeric(summary_dat[trait.plot,c("lower.hdi","upper.hdi")])
-  
-  with(d,segments(x,
-                  rep(0,length(x)),
-                  x,
-                  y,
-                  lend=2,
-                  col=ifelse(d$x > interval[1] & d$x < interval[2],
-                             cols[1],cols[2])))
-  
-
-  
-  abline(v=0)
-# Add summaries to plot
-  median.text <- eval(paste("median = ",summary_dat[trait.summary, "median"]))  
-  mode.text <- eval(paste("mode = ",summary_dat[trait.summary,"mode"]))  
-  int <- summary_dat[trait.summary,c("lower.hdi","upper.hdi")]
-  int.text <- eval(paste("95% hdi = ",int[1], " - ", int[2],sep=""))  
-  
-  # title <- ifelse(grepl("A",trait.summary),"VA",
-  #                 ifelse(grepl("D",trait),"VD","M"))
-
-  title <- trait.summary
-  
-  legend(xlims[2]*0.8,ylims[2],
-         legend=rbind(median.text,mode.text,int.text),
-         bty="n",
-         adj=1,
-         # title=title,
-         # title.adj=0
-         )
-  }
-###################################################
-
-
-
 
 
 ################# Make Figure ################
