@@ -160,22 +160,29 @@ qgparams.post <- sapply(dimnames(p$pr.overall)[[1]], function(m) {
 p$H <- t(sapply(qgparams.post, function(x) x$h2.obs))
 p$E <- t(sapply(qgparams.post, function(x) x$E))
 
+
 # Use QGglmm to extract full variance/covariance matrix on observed scale
-vcv.G.obs <- parallel::mclapply(1:dim(p$VA)[3], function(i) {
-  QGglmm::QGmvparams(
-    vcv.G = p$VA[, , i],
-    vcv.P = p$VP[, , i],
-    predict = qlogis(p$pr.block[, , i]),
-    models = c('binom1.logit', 'Gaussian'),
-    verbose = FALSE
-  )$vcv.G.obs
-}, mc.cores = 10) 
-vcv.G.obs <- do.call(abind::abind, c(vcv.G.obs, list(along = 3)))
+convertVCVscale <- function(metric, p) {
+  vcv <- parallel::mclapply(1:dim(p[[metric]])[3], function(i) {
+    QGglmm::QGmvparams(
+      vcv.G = p[[metric]][, , i],
+      vcv.P = p$VP[, , i],
+      predict = qlogis(p$pr.block[, , i]),
+      models = c('binom1.logit', 'Gaussian'),
+      verbose = FALSE
+    )$vcv.G.obs
+  }, mc.cores = 10) 
+  vcv <- do.call(abind::abind, c(vcv, list(along = 3)))
+  dimnames(vcv)[1:2] <- dimnames(p[[metric]])[1:2]
+  vcv
+}
+vcv.obs <- sapply(c('VA', 'VM', 'VD'), convertVCVscale, p = p, simplify = FALSE)
+  
 
 # Compute evolvability 
 e.params_BetaMCMC <- evolvability::evolvabilityBetaMCMC(
   G_mcmc = evolvability::meanStdGMCMC(
-    t(apply(vcv.G.obs, 3, as.vector)),
+    t(apply(vcv.obs$VA, 3, as.vector)),
     t(p$pr.overall)
   ),
   Beta = evolvability::randomBeta(1000, 2),

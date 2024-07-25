@@ -6,8 +6,8 @@ vecSmry <- function(x) {
 }
 
 comp.smry <- function(x, gt = 0) {
- library(tidyverse)
- df <- if(is.null(dim(x))) {
+  library(tidyverse)
+  df <- if(is.null(dim(x))) {
     as.data.frame(rbind(vecSmry(x)))
   } else if(length(dim(x)) == 2) {
     as.data.frame(t(apply(x, 1, vecSmry)))
@@ -54,7 +54,7 @@ plot.metric <- function(x) {
 }
 
 
-####### Function to make plot of posterior
+# Function to make plot of posterior
 plot.posterior <- function(x,bar.width,xlims,cols,trait.plot){
   # For testing
   # x <- eB_posterior_head_tail # data to plot
@@ -101,4 +101,3 @@ plot.posterior <- function(x,bar.width,xlims,cols,trait.plot){
          # title.adj=0,
          xpd=T)
 }
-###################################################
