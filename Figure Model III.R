@@ -2,7 +2,7 @@ library('dplyr')
 source('0_misc_funcs.R')
 
 # Load data
-load("hatch_settle_posterior_20230119_1741.rdata") 
+load("Model_III_posterior_20230119_1741.rdata") 
 
 ######## Summary stats of the posteriors for variance components ##############
 summary_dat <- as.data.frame(rbind(vecSmry(p$additive.vcov[1,1,]),

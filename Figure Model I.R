@@ -2,7 +2,7 @@ library('dplyr')
 source('0_misc_funcs.R')
 
 # Load data
-load("head_tail_posterior_20230116_1944.rdata") 
+load("Model_I_posterior_20230116_1944.rdata") 
 
 ######## Summary stats of the posteriors for variance components ##############
 summary_dat <- as.data.frame(rbind(vecSmry(p$additive.vcov[1,1,]),

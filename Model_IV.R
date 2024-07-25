@@ -249,12 +249,12 @@ pred.pr.settle <- lapply(colnames(sire.eff.x), function(m) {
 }) %>% 
   bind_rows()
 
-save.image(format(end, "predict_settling_posterior_%Y%m%d_%H%M.rdata"))
+save.image(format(end, "Model_IV_posterior_%Y%m%d_%H%M.rdata"))
 
 plot(
   post, 
   vars = c("deviance", "intercept", "int.beta", "sire.beta", "maternal.beta", "block.beta"),
-  file = format(end, "predict_settling_plots_%Y%m%d_%H%M.pdf")
+  file = format(end, "Model_IV_plots_%Y%m%d_%H%M.pdf")
 )
 
 print(elapsed)

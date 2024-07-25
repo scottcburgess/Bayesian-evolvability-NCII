@@ -21,7 +21,7 @@ rm(list = ls())
 library(tidyverse)
 library(runjags)
 source("0_misc_funcs.R")
-load("ratio_posterior_20230117_0903.rdata")
+load("Model_II_posterior_20230117_0903.rdata")
 ```
 
 ## Run Summary
