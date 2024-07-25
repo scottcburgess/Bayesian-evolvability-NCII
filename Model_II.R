@@ -109,25 +109,29 @@ p$VD <- 4 * p$interaction.var
 p$VP <- 2 * p$additive.var + p$VM + p$interaction.var + p$resid.var
 
 # Compute heritability and evolvability based on deVillemereuil et al 2016
-qgparams.post <- lapply(1:length(p$VA), function(i) {
-  QGglmm::QGparams(
-    mu = p$mean.overall[i],
-    var.a = p$VA[i],
-    var.p = p$VP[i],
-    predict = p$mean.log.ratio.block[, i],
-    custom.model = list(
-      inv.link = function(x) {exp(x)},
-      var.func = function(x) {0},
-      d.inv.link = function(x) {exp(x)}
-    ),
-    verbose = FALSE
-  )
-}) %>% 
-  bind_rows() %>% 
-  mutate(E = p$VA / (p$mean.overall ^ 2))
+convertVarScale <- function(metric, p) {
+  lapply(1:length(p[[metric]]), function(i) {
+    QGglmm::QGparams(
+      mu = p$mean.overall[i],
+      var.a = p[[metric]][i],
+      var.p = p$VP[i],
+      predict = p$mean.log.ratio.block[, i],
+      custom.model = list(
+        inv.link = function(x) {exp(x)},
+        var.func = function(x) {0},
+        d.inv.link = function(x) {exp(x)}
+      ),
+      verbose = FALSE
+    )
+  }) %>% 
+    bind_rows()
+}
+var.obs <- sapply(c('VA', 'VM', 'VD'), convertVarScale, p = p, simplify = FALSE)
 
-p$H <- qgparams.post$h2.obs
-p$E <- qgparams.post$E
+p$H <- var.obs$VA$h2.obs
+p$E <- var.obs$VA |> 
+  mutate(E = var.a.obs / (p$mean.overall ^ 2)) |> 
+  pull('E')
 
 save.image(format(end, "Model_II_posterior_%Y%m%d_%H%M.rdata"))
 
