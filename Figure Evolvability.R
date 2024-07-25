@@ -2,11 +2,11 @@ library('dplyr')
 source('0_misc_funcs.R')
 
 # Load data
-load("head_tail_posterior_20230116_1944.rdata") 
+load("Model_I_posterior_20230116_1944.rdata") 
 pE_head_tail <- p$E
 e.params_BetaMCMC_head_tail <- e.params_BetaMCMC
 
-load("hatch_settle_posterior_20230119_1741.rdata") 
+load("Model_III_posterior_20230119_1741.rdata") 
 pE_hatch_settle <- p$E
 e.params_BetaMCMC_hatch_settle <- e.params_BetaMCMC
 

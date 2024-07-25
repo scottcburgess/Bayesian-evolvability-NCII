@@ -135,7 +135,6 @@ dimnames(p$additive.vcov)[1:2] <-
 p$VA <- 4 * p$additive.vcov
 p$VM <- p$maternal.vcov
 p$VD <- 4 * p$interaction.vcov
-# p$VP <- p$VA + p$VM + p$VD + p$resid.vcov
 p$VP <- 2 * p$additive.vcov + p$VM + p$interaction.vcov + p$resid.vcov
 p$H <- p$VA / p$VP
 p$E <- rbind(
@@ -143,6 +142,7 @@ p$E <- rbind(
   tail = p$VA[2, 2, ] / (p$mean.overall[2, ] ^ 2)
 )
 
+# Compute evolvability
 e.params_means <- do.call(
   rbind,
   parallel::mclapply(1:dim(p$VA)[3], function(i) {
@@ -163,11 +163,11 @@ e.params_BetaMCMC <- evolvability::evolvabilityBetaMCMC(
 )
 
 # Save all objects and plot posterior summaries
-save.image(format(end, "head_tail_posterior_%Y%m%d_%H%M.rdata"))
+save.image(format(end, "Model_I_posterior_%Y%m%d_%H%M.rdata"))
 
 plot(
   post, 
-  file = format(end, "head_tail_plots_%Y%m%d_%H%M.pdf")
+  file = format(end, "Model_I_plots_%Y%m%d_%H%M.pdf")
 )
 
 print(elapsed)

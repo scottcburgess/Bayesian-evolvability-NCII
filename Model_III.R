@@ -140,7 +140,6 @@ dimnames(p$additive.vcov)[1:2] <-
 p$VA <- 4 * p$additive.vcov
 p$VM <- p$maternal.vcov
 p$VD <- 4 * p$interaction.vcov
-# p$VP <- p$VA + p$VM + p$VD
 p$VP <- 2 * p$additive.vcov + p$VM + p$interaction.vcov
 
 # Compute heritability and evolvability based on deVillemereuil et al 2016
@@ -161,8 +160,7 @@ qgparams.post <- sapply(dimnames(p$pr.overall)[[1]], function(m) {
 p$H <- t(sapply(qgparams.post, function(x) x$h2.obs))
 p$E <- t(sapply(qgparams.post, function(x) x$E))
 
-# Compute evolvability using QGglmm to extract full variance/covariance matrix
-#   on observed scale
+# Use QGglmm to extract full variance/covariance matrix on observed scale
 vcv.G.obs <- parallel::mclapply(1:dim(p$VA)[3], function(i) {
   QGglmm::QGmvparams(
     vcv.G = p$VA[, , i],
@@ -174,12 +172,7 @@ vcv.G.obs <- parallel::mclapply(1:dim(p$VA)[3], function(i) {
 }, mc.cores = 10) 
 vcv.G.obs <- do.call(abind::abind, c(vcv.G.obs, list(along = 3)))
 
-# e.params_BetaMCMC <- evolvability::evolvabilityBetaMCMC(
-#   G_mcmc = t(apply(p$VA, 3, as.vector)),
-#   Beta = evolvability::randomBeta(1000, 2),
-#   post.dist = TRUE
-# )
-
+# Compute evolvability 
 e.params_BetaMCMC <- evolvability::evolvabilityBetaMCMC(
   G_mcmc = evolvability::meanStdGMCMC(
     t(apply(vcv.G.obs, 3, as.vector)),
@@ -191,11 +184,11 @@ e.params_BetaMCMC <- evolvability::evolvabilityBetaMCMC(
 
 
 # Save all objects and plot posterior summaries
-save.image(format(end, "hatch_settle_posterior_%Y%m%d_%H%M.rdata"))
+save.image(format(end, "Model_III_posterior_%Y%m%d_%H%M.rdata"))
 
 plot(
   post, 
-  file = format(end, "hatch_settle_plots_%Y%m%d_%H%M.pdf")
+  file = format(end, "Model_III_plots_%Y%m%d_%H%M.pdf")
 )
 
 print(elapsed)

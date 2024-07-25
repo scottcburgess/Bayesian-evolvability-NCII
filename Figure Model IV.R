@@ -2,7 +2,7 @@ library(tidyverse)
 library(gridExtra)
 
 # Load data
-load('predict_settling_posterior_20230117_0038.rdata')
+load('Model_IV_posterior_20230117_0038.rdata')
 
 pr.breaks <- seq(0, 1, length.out = 100)
 

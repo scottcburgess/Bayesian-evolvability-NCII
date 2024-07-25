@@ -20,7 +20,7 @@ options(scipen = 10, digits = 3)
 rm(list = ls())
 library(tidyverse)
 library(runjags)
-load("predict_settling_posterior_20230117_0038.rdata")
+load("Model_IV_posterior_20230117_0038.rdata")
 source("0_misc_funcs.R")
 ```
 

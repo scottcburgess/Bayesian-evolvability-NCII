@@ -99,14 +99,16 @@ post <- run.jags(
 end <- Sys.time()
 elapsed <- swfscMisc::autoUnits(post$timetaken)
 
+# Extract list of posteriors
 p <- swfscMisc::runjags2list(post)
 
+# Add QG metrics to list
 p$VA <- 4 * p$additive.var
 p$VM <- p$maternal.var
 p$VD <- 4 * p$interaction.var
-# p$VP <- p$VA + p$VM + p$VD
 p$VP <- 2 * p$additive.var + p$VM + p$interaction.var + p$resid.var
 
+# Compute heritability and evolvability based on deVillemereuil et al 2016
 qgparams.post <- lapply(1:length(p$VA), function(i) {
   QGglmm::QGparams(
     mu = p$mean.overall[i],
@@ -127,8 +129,8 @@ qgparams.post <- lapply(1:length(p$VA), function(i) {
 p$H <- qgparams.post$h2.obs
 p$E <- qgparams.post$E
 
-save.image(format(end, "ratio_posterior_%Y%m%d_%H%M.rdata"))
+save.image(format(end, "Model_II_posterior_%Y%m%d_%H%M.rdata"))
 
-plot(post, file = format(end, "ratio_plots_%Y%m%d_%H%M.pdf"))
+plot(post, file = format(end, "Model_II_plots_%Y%m%d_%H%M.pdf"))
 
 print(elapsed)
