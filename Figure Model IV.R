@@ -1,3 +1,4 @@
+rm(list=ls())
 library(tidyverse)
 library(gridExtra)
 
@@ -132,7 +133,7 @@ c.d <- sapply(dimnames(p$interaction.mean)[[2]], function(m) {
 }, simplify = FALSE)
 
 
-# Uncomment lines 126 and 128 to send figure to a PDF (best for copy/paste inclusion in manuscript)
+# Uncomment lines 136 and 138 to send figure to a PDF (best for copy/paste inclusion in manuscript)
 # pdf('Figure Model IV.pdf', width = 10, height = 10)
 do.call(grid.arrange, c(a.b, c.d, ncol = 2))
 # dev.off()
