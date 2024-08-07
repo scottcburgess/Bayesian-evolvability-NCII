@@ -5,7 +5,7 @@ library(gridExtra)
 # Load data
 load('Model_IV_posterior_20230117_0038.rdata')
 
-pr.breaks <- seq(0, 1, length.out = 100)
+pr.breaks <- seq(0, 1, length.out = 400)
 
 # Use line 10 or 11 just for viewing, but comment out when saving final pdf.
 # windows(width=4,height=4) # if on PC
@@ -105,7 +105,7 @@ c.d <- sapply(dimnames(p$interaction.mean)[[2]], function(m) {
       x = -14.5, 
       y = 0.02, 
       label = paste('Additive Sire\n', smry[[1]], sep = '', collapse = ''),
-      size = 3,
+      size = 2.8,
       hjust = 0,
       vjust = 0,
       color = effect.colors['Additive Sire']
@@ -115,7 +115,7 @@ c.d <- sapply(dimnames(p$interaction.mean)[[2]], function(m) {
       x = 14.5, 
       y = 0.02, 
       label = paste('Maternal\n', smry[[2]], sep = '', collapse = ''),
-      size = 3,
+      size = 2.8,
       hjust = 1,
       vjust = 0,
       color = effect.colors['Maternal']
@@ -134,6 +134,6 @@ c.d <- sapply(dimnames(p$interaction.mean)[[2]], function(m) {
 
 
 # Uncomment lines 136 and 138 to send figure to a PDF (best for copy/paste inclusion in manuscript)
-# pdf('Figure Model IV.pdf', width = 10, height = 10)
+# pdf('Figure Model IV.pdf', width = 6, height = 6)
 do.call(grid.arrange, c(a.b, c.d, ncol = 2))
 # dev.off()
