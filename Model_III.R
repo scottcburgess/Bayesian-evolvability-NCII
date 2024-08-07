@@ -168,7 +168,7 @@ convertVCVscale <- function(metric, p) {
       vcv.G = p[[metric]][, , i],
       vcv.P = p$VP[, , i],
       predict = qlogis(p$pr.block[, , i]),
-      models = c('binom1.logit', 'Gaussian'),
+      models = c('binom1.logit', 'binom1.logit'),
       verbose = FALSE
     )$vcv.G.obs
   }, mc.cores = 10) 
