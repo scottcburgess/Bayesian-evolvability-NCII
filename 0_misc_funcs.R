@@ -55,13 +55,11 @@ plot.metric <- function(x) {
 
 
 # Function to make plot of posterior
-plot.posterior <- function(x,bar.width,xlims,cols,trait.plot){
-  # For testing
-  # x <- eB_posterior_head_tail # data to plot
-  # bar.width = 0.0001 # width of the bars in the histogram
-  # xlims <- c(0,0.001)
-  # cols = "dodgerblue" # color of the bars to plot
-  # trait.plot = "e_mean" # What trait to plot from summary_dat
+plot.posterior <- function(x,bar.width,xlims,cols){
+  # x: data to plot
+  # bar.width: width of the bars in the histogram
+  # xlims: min and max for the x axis
+  # cols: color of the bars to plot
   summary.matrix = vecSmry(x)
   blims <- max(abs(x))*2
   brks <- seq(-blims,blims,by=bar.width)
@@ -88,16 +86,9 @@ plot.posterior <- function(x,bar.width,xlims,cols,trait.plot){
   mode.text <- eval(paste("mode = ",round(summary.matrix["mode"],6)))  
   int.text <- eval(paste("95% hdi = ",interval[1], " - ", interval[2],sep=""))  
   
-  # title <- ifelse(grepl("e_",trait.plot),expression(paste("e",beta)),
-  #                 ifelse(grepl("r_",trait.plot),expression(paste("r",beta)),
-  #                        expression(paste("c",beta))))
-  
-  
   legend(xlims[2]*0.9,ylims[2],
          legend=rbind(median.text,mode.text,int.text),
          bty="n",
          adj=1,
-         # title=title,
-         # title.adj=0,
          xpd=T)
 }
