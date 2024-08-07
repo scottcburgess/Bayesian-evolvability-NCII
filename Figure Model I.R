@@ -1,3 +1,4 @@
+rm(list=ls())
 library('dplyr')
 source('0_misc_funcs.R')
 
@@ -43,7 +44,7 @@ summary_dat <- as.data.frame(rbind(vecSmry(p$additive.vcov[1,1,]),
                                          'Head.VP','Tail.VP','Head.Tail.cVP',
                                          'Head.H','Tail.H',
                                          'Head.E','Tail.E'))
-summary_dat <- round(summary_dat,2)
+round(summary_dat,4)
 ############################################
 
 
@@ -55,8 +56,8 @@ vc.color <- data.frame(color = c("#E76F51",
                                  "#2a9d8f",
                                  "#82ded3"))
 
-# Use line 118 or 119 just for viewing, but comment out when saving final pdf.
-# When saving pdf for manuscript, uncomment lines 121 and 232
+# Use line 61 or 62 just for viewing, but comment out when saving final pdf.
+# When saving pdf for manuscript, uncomment lines 64 and 156
 # windows(width=6,height=6) # use on PC
 quartz(width=6,height=6) # use on Mac
 
@@ -70,104 +71,86 @@ covar_lims <- c(-60,120)
 bar.width <- 0.5
 
 # a)
-plot.posterior(x=p$additive.vcov[1,1,],
+plot.posterior(x=p$VA[1,1,],
                bar.width=bar.width,
                xlims=head_lims,
-               cols=vc.color[1:2,],
-               trait.plot="Head.G",
-               trait.summary="Head.G")
+               cols=vc.color[1:2,])
 mtext("a)",side=3,adj=0)
 mtext("Trunk length",side=3,adj=0.5,line=1)
 mtext("Probability density",side=2,line=1,cex=0.8)
 axis(side=1,at=seq(0,800,by=10))
-mtext("Additive sire variance, G",side=1,line=2,cex=0.8)
+mtext("Additive genetic variance, VA",side=1,line=2,cex=0.8)
 
 # b) 
-plot.posterior(x=p$additive.vcov[2,2,],
+plot.posterior(x=p$VA[2,2,],
                bar.width=bar.width,
                xlims=tail_lims,
-               cols=vc.color[1:2,],
-               trait.plot="Tail.G",
-               trait.summary="Tail.G")
+               cols=vc.color[1:2,])
 mtext("b)",side=3,adj=0)
 mtext("Tail length",side=3,adj=0.5,line=1)
 axis(side=1,at=seq(0,800,by=50))
-mtext("Additive sire variance, G",side=1,line=2,cex=0.8)
+mtext("Additive genetic variance, VA",side=1,line=2,cex=0.8)
 # c) 
-plot.posterior(x=p$additive.vcov[1,2,],
+plot.posterior(x=p$VA[1,2,],
                bar.width=bar.width,
                xlims=covar_lims,
-               cols=vc.color[1:2,],
-               trait.plot="Head.Tail.cG",
-               trait.summary="Head.Tail.cG")
+               cols=vc.color[1:2,])
 mtext("c) ",side=3,adj=0)
 mtext("Trunk-Tail",side=3,adj=0.5,line=1)
 axis(side=1,at=seq(-300,300,by=20))
-mtext("Additive sire covariance",side=1,line=2,cex=0.8)
+mtext("Additive genetic covariance",side=1,line=2,cex=0.8)
 
 # d)
-plot.posterior(x=p$maternal.vcov[1,1,],
+plot.posterior(x=p$VM[1,1,],
                bar.width=bar.width,
                xlims=head_lims,
-               cols=vc.color[3:4,],
-               trait.plot="Head.M",
-               trait.summary="Head.M")
+               cols=vc.color[3:4,])
 mtext("d)",side=3,adj=0)
 mtext("Probability density",side=2,line=1,cex=0.8)
 axis(side=1,at=seq(0,200,by=10))
 mtext("Maternal effect variance, M",side=1,line=2,cex=0.8)
 # e) 
-plot.posterior(x=p$maternal.vcov[2,2,],
+plot.posterior(x=p$VM[2,2,],
                bar.width=bar.width,
                xlims=tail_lims,
-               cols=vc.color[3:4,],
-               trait.plot="Tail.M",
-               trait.summary="Tail.M")
+               cols=vc.color[3:4,])
 mtext("e)",side=3,adj=0)
 axis(side=1,at=seq(0,800,by=50))
 mtext("Maternal effect variance, M",side=1,line=2,cex=0.8)
 # f) 
-plot.posterior(x=p$maternal.vcov[1,2,],
+plot.posterior(x=p$VM[1,2,],
                bar.width=bar.width,
                xlims=covar_lims,
-               cols=vc.color[3:4,],
-               trait.plot="Head.Tail.cM",
-               trait.summary="Head.Tail.cM")
+               cols=vc.color[3:4,])
 mtext("f)",side=3,adj=0)
 axis(side=1,at=seq(-300,300,by=20))
 mtext("Maternal effect covariance",side=1,line=2,cex=0.8)
 
 # g)
-plot.posterior(x=p$interaction.vcov[1,1,],
+plot.posterior(x=p$VD[1,1,],
                bar.width=bar.width,
                xlims=head_lims,
-               cols=vc.color[5:6,],
-               trait.plot="Head.D",
-               trait.summary="Head.D")
+               cols=vc.color[5:6,])
 mtext("g)",side=3,adj=0)
 mtext("Probability density",side=2,line=1,cex=0.8)
 axis(side=1,at=seq(0,800,by=10))
-mtext("Interaction variance, D",side=1,line=2,cex=0.8)
+mtext("Dominance variance, VD",side=1,line=2,cex=0.8)
 # h) 
-plot.posterior(x=p$interaction.vcov[2,2,],
+plot.posterior(x=p$VD[2,2,],
                bar.width=bar.width,
                xlims=tail_lims,
-               cols=vc.color[5:6,],
-               trait.plot="Tail.D",
-               trait.summary="Tail.D")
+               cols=vc.color[5:6,])
 mtext("h)",side=3,adj=0)
 axis(side=1,at=seq(0,800,by=50))
-mtext("Interaction variance, D",side=1,line=2,cex=0.8)
+mtext("Dominance variance, VD",side=1,line=2,cex=0.8)
 # i) 
-plot.posterior(x=p$interaction.vcov[1,2,],
+plot.posterior(x=p$VD[1,2,],
                bar.width=bar.width,
                xlims=covar_lims,
-               cols=vc.color[5:6,],
-               trait.plot="Head.Tail.cD",
-               trait.summary="Head.Tail.cD")
+               cols=vc.color[5:6,])
 mtext("i)",side=3,adj=0)
 axis(side=1,at=seq(-300,300,by=20))
-mtext("Interaction covariance",side=1,line=2,cex=0.8)
+mtext("Dominance covariance",side=1,line=2,cex=0.8)
 ############################
 
 # dev.off()
