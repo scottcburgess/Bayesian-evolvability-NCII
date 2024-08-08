@@ -170,14 +170,25 @@ convertVCVscale <- function(metric, p) {
       predict = qlogis(p$pr.block[, , i]),
       models = c('binom1.logit', 'binom1.logit'),
       verbose = FALSE
-    )$vcv.G.obs
-  }, mc.cores = 10) 
-  vcv <- do.call(abind::abind, c(vcv, list(along = 3)))
-  dimnames(vcv)[1:2] <- dimnames(p[[metric]])[1:2]
-  vcv
+    )
+  }, mc.cores = parallel::detectCores() - 1) |> 
+    purrr::list_transpose()
+  
+  sapply(vcv, function(x) {
+    if(is.null(dim(x[[1]]))) {
+      x <- do.call(rbind, x)
+      colnames(x) <- dimnames(p[[metric]])[[1]]
+      x
+    } else {
+      do.call(
+        abind::abind, 
+        c(x, list(along = 3, new.names = dimnames(p[[metric]])))
+      )
+    }
+  })
 }
 vcv.obs <- sapply(c('VA', 'VM', 'VD'), convertVCVscale, p = p, simplify = FALSE)
-  
+
 
 # Compute evolvability 
 e.params_BetaMCMC <- evolvability::evolvabilityBetaMCMC(
