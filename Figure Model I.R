@@ -108,7 +108,7 @@ plot.posterior(x=p$VM[1,1,],
 mtext("d)",side=3,adj=0)
 mtext("Probability density",side=2,line=1,cex=0.8)
 axis(side=1,at=seq(0,200,by=10))
-mtext("Maternal effect variance, M",side=1,line=2,cex=0.8)
+mtext("Maternal effect variance, VM",side=1,line=2,cex=0.8)
 # e) 
 plot.posterior(x=p$VM[2,2,],
                bar.width=bar.width,
@@ -116,7 +116,7 @@ plot.posterior(x=p$VM[2,2,],
                cols=vc.color[3:4,])
 mtext("e)",side=3,adj=0)
 axis(side=1,at=seq(0,800,by=50))
-mtext("Maternal effect variance, M",side=1,line=2,cex=0.8)
+mtext("Maternal effect variance, VM",side=1,line=2,cex=0.8)
 # f) 
 plot.posterior(x=p$VM[1,2,],
                bar.width=bar.width,
@@ -151,6 +151,7 @@ plot.posterior(x=p$VD[1,2,],
 mtext("i)",side=3,adj=0)
 axis(side=1,at=seq(-300,300,by=20))
 mtext("Dominance covariance",side=1,line=2,cex=0.8)
+
 ############################
 
 # dev.off()
