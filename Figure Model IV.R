@@ -133,7 +133,6 @@ c.d <- sapply(dimnames(p$interaction.mean)[[2]], function(m) {
 }, simplify = FALSE)
 
 
-# Uncomment lines 136 and 138 to send figure to a PDF (best for copy/paste inclusion in manuscript)
 # pdf('Figure Model IV.pdf', width = 6, height = 6)
 do.call(grid.arrange, c(a.b, c.d, ncol = 2))
 # dev.off()
