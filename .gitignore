@@ -7,3 +7,6 @@
 *.html
 *.pdf
 results/*
+.Rdata
+.httr-oauth
+.quarto

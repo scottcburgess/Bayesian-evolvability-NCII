@@ -125,3 +125,20 @@ cbind.data.frame(Head.E,
                  Settle.E)
 
 ###############
+
+
+
+# Load data
+load('Model_IV_posterior_20230117_0038.rdata')
+
+# Full sib families
+vecSmry(p$int.beta[1,]) # head
+vecSmry(p$int.beta[2,]) # tail
+
+# Maternal effect
+vecSmry(p$maternal.beta[1,]) # head 
+vecSmry(p$maternal.beta[2,]) # tail
+
+# Additive Sire 
+vecSmry(p$sire.beta[1,]) # head 
+vecSmry(p$sire.beta[2,]) # tail
