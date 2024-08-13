@@ -118,7 +118,7 @@ c.d <- sapply(dimnames(p$interaction.mean)[[2]], function(m) {
     ) +
     coord_cartesian(xlim = c(-15, 15), ylim = c(0, 1), expand = FALSE) +
     labs(
-      x = paste0('Marginal effect (', ifelse(m == 'head',"Trunk", "Tail"), ' length)'), 
+      x = paste0('Marginal effect (', ifelse(m == 'head',"trunk", "tail"), ' length)'), 
       y = 'Probability of settling',
       title = ifelse(m == 'head', 'c)', 'd)')
     ) +
