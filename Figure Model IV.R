@@ -7,10 +7,6 @@ load('Model_IV_posterior_20230117_0038.rdata')
 
 pr.breaks <- seq(0, 1, length.out = 400)
 
-# Use line 10 or 11 just for viewing, but comment out when saving final pdf.
-# windows(width=4,height=4) # if on PC
-quartz(width=6,height=6) # if on Mac
-
 a.b <- sapply(dimnames(p$interaction.mean)[[2]], function(m) {
   int.breaks <- seq(
     floor(min(p$interaction.mean[, m, ])), 
@@ -66,7 +62,7 @@ a.b <- sapply(dimnames(p$interaction.mean)[[2]], function(m) {
       vjust = 0
     ) +
     labs(
-      x = paste(ifelse(m == 'head', 'Head', 'Tail'), 'length (mean per full-sib family)'), 
+      x = paste(ifelse(m == 'head', 'Trunk', 'Tail'), 'length (mean per full-sib family)'), 
       y = 'Probability of settling',
       title = ifelse(m == 'head', 'a)', 'b)') 
     ) +
@@ -122,7 +118,7 @@ c.d <- sapply(dimnames(p$interaction.mean)[[2]], function(m) {
     ) +
     coord_cartesian(xlim = c(-15, 15), ylim = c(0, 1), expand = FALSE) +
     labs(
-      x = paste0('Marginal effect (', m, ' length)'), 
+      x = paste0('Marginal effect (', ifelse(m == 'head',"Trunk", "Tail"), ' length)'), 
       y = 'Probability of settling',
       title = ifelse(m == 'head', 'c)', 'd)')
     ) +
@@ -133,6 +129,6 @@ c.d <- sapply(dimnames(p$interaction.mean)[[2]], function(m) {
 }, simplify = FALSE)
 
 
-# pdf('Figure Model IV.pdf', width = 6, height = 6)
+pdf('Figure Model IV.pdf', width = 6, height = 6)
 do.call(grid.arrange, c(a.b, c.d, ncol = 2))
-# dev.off()
+dev.off()
