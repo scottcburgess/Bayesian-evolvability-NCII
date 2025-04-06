@@ -14,25 +14,25 @@ Powell JA, Archer FI, Burgess SC. In Prep. Evolvability of marine dispersal trai
 `tidyverse` <br />
 
 ### Files
-`1_Data` <br />
+**1_Data** <br />
 `Moccidentalis All Traits.csv` raw data file. <br />
 `head_tail_data.rds` formatted data for Model I and II in RDS format (see `?readRDS`).  <br />
 `hatch_settle.rds` formatted data for Models III and IV in RDS format (see `?readRDS`).  <br />
 
-`2_Model_R scripts` <br />
+**2_Model_R scripts** <br />
 `Model_##.R` scripts for running Models I - IV.  <br />
 `0_misc_funcs.R` miscellaneous functions used in summary and figure making files.  <br />
 `1_load_and_format.R` load raw data and create formatted RDS files for use in models.  <br />
 
-`3_Model_outputs` <br />
+**3_Model_outputs** <br />
 `Model_##.Rmd` Rmarkdown file for summarizing posterior output from model runs.  <br />
 `Model_I_posterior_########_####.rdata` Image of all objects and posteriors produced by the model runs.  <br />
 
-`4_Figure_R_scripts` <br />
+**4_Figure_R_scripts** <br />
 `Figure_#.R` scripts for making figures in manuscript.  <br />
 `Results_Summary_and_Tables.R` scripts for making the summaries and tables in manuscript
 
-`5_Figure_outputs` <br />
+**5_Figure_outputs** <br />
 `Figure_#.pdf` figures in the paper
 
 
