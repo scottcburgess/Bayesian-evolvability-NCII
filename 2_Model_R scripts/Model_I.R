@@ -10,7 +10,7 @@ total.sample <- 50000
 thin <- 100
 
 # Load data
-df <- readRDS("head_tail_data.rds") 
+df <- readRDS("1_Data/head_tail_data.rds") 
 
 # Run model
 post <- run.jags(
@@ -163,11 +163,11 @@ e.params_BetaMCMC <- evolvability::evolvabilityBetaMCMC(
 )
 
 # Save all objects and plot posterior summaries
-save.image(format(end, "Model_I_posterior_%Y%m%d_%H%M.rdata"))
+save.image(format(end, "3_Model_outputs/Model_I_posterior_%Y%m%d_%H%M.rdata"))
 
 plot(
   post, 
-  file = format(end, "Model_I_plots_%Y%m%d_%H%M.pdf")
+  file = format(end, "3_Model_outputs/Model_I_plots_%Y%m%d_%H%M.pdf")
 )
 
 print(elapsed)

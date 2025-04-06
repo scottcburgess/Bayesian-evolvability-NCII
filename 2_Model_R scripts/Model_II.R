@@ -8,7 +8,7 @@ burnin <- 1000000
 total.sample <- 10000
 thin <- 100
 
-df <- readRDS("head_tail_data.rds")
+df <- readRDS("1_Data/head_tail_data.rds")
 df$log.ratio <- log(df$head / df$tail)
 
 post <- run.jags(
@@ -133,8 +133,8 @@ p$E <- var.obs$VA |>
   mutate(E = var.a.obs / (p$mean.overall ^ 2)) |> 
   pull('E')
 
-save.image(format(end, "Model_II_posterior_%Y%m%d_%H%M.rdata"))
+save.image(format(end, "3_Model_outputs/Model_II_posterior_%Y%m%d_%H%M.rdata"))
 
-plot(post, file = format(end, "Model_II_plots_%Y%m%d_%H%M.pdf"))
+plot(post, file = format(end, "3_Model_outputs/Model_II_plots_%Y%m%d_%H%M.pdf"))
 
 print(elapsed)

@@ -10,7 +10,7 @@ burnin <- 500000
 total.sample <- 1400
 thin <- 100
 
-df <- readRDS("hatch_settle_data.rds") 
+df <- readRDS("1_Data/hatch_settle_data.rds") 
 
 blocks.to.keep <- table(block = df$block, metric = df$metric) %>% 
   as.data.frame() %>% 
@@ -249,12 +249,12 @@ pred.pr.settle <- lapply(colnames(sire.eff.x), function(m) {
 }) %>% 
   bind_rows()
 
-save.image(format(end, "Model_IV_posterior_%Y%m%d_%H%M.rdata"))
+save.image(format(end, "3_Model_outputs/Model_IV_posterior_%Y%m%d_%H%M.rdata"))
 
 plot(
   post, 
   vars = c("deviance", "intercept", "int.beta", "sire.beta", "maternal.beta", "block.beta"),
-  file = format(end, "Model_IV_plots_%Y%m%d_%H%M.pdf")
+  file = format(end, "3_Model_outputs/Model_IV_plots_%Y%m%d_%H%M.pdf")
 )
 
 print(elapsed)
