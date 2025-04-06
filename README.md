@@ -26,7 +26,7 @@ Powell JA, Archer FI, Burgess SC. In Prep. Evolvability of marine dispersal trai
 
 **3_Model_outputs** <br />
 `Model_##.Rmd` Rmarkdown file for summarizing posterior output from model runs.  <br />
-`Model_I_posterior_########_####.rdata` Image of all objects and posteriors produced by the model runs.  <br />
+`Model_#_posterior_########_####.rdata` Image of all objects and posteriors produced by runs of Models I - IV.  <br />
 
 **4_Figure_R_scripts** <br />
 `Figure_#.R` scripts for making figures in manuscript.  <br />
