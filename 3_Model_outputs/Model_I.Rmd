@@ -21,7 +21,7 @@ rm(list = ls())
 library(tidyverse)
 library(runjags)
 load("Model_I_posterior_20230116_1944.rdata")
-source("0_misc_funcs.R")
+source("2_Model_R_scripts/0_misc_funcs.R")
 ```
 
 ## Run Summary

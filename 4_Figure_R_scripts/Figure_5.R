@@ -1,11 +1,11 @@
 rm(list=ls())
-library(tidyverse)
-library(gridExtra)
+library('tidyverse')
+library('gridExtra')
 
 # Load data
-load('Model_IV_posterior_20230117_0038.rdata')
+load('3_Model_outputs/Model_IV_posterior_20230117_0038.rdata')
 
-pr.breaks <- seq(0, 1, length.out = 400)
+pr.breaks <- seq(0, 1, length.out = 100)
 
 a.b <- sapply(dimnames(p$interaction.mean)[[2]], function(m) {
   int.breaks <- seq(
@@ -41,7 +41,7 @@ a.b <- sapply(dimnames(p$interaction.mean)[[2]], function(m) {
   
   ggplot(pr.settle, aes(interaction.mean, pr.settle)) +
     geom_tile(aes(fill = wt)) +
-    geom_hline(yintercept = 0.5, color = 'white', alpha = 0.6, linetype = 'dashed', linewidth = 1) +
+    geom_hline(yintercept = 0.5, color = 'white', alpha = 0.6, linetype = 'dashed', linewidth = 0.7) +
     scale_fill_viridis_c(option = 'inferno') +
     annotate(
       'label', 
@@ -57,12 +57,12 @@ a.b <- sapply(dimnames(p$interaction.mean)[[2]], function(m) {
       color="white",
       fill=NA,
       label.size=NA,
-      size=3,
+      size=2,
       hjust = 0,
       vjust = 0
     ) +
     labs(
-      x = paste(ifelse(m == 'head', 'Trunk', 'Tail'), 'length (mean per full-sib family)'), 
+      x = paste(ifelse(m == 'head', 'Trunk', 'Tail'), 'length\n(mean per full-sib family)'), 
       y = 'Probability of settling',
       title = ifelse(m == 'head', 'a)', 'b)') 
     ) +
@@ -70,65 +70,17 @@ a.b <- sapply(dimnames(p$interaction.mean)[[2]], function(m) {
     theme_minimal() +
     theme(
       legend.position = 'none',
-      panel.grid = element_blank()
-    )
-}, simplify = FALSE)
-
-
-
-effect.colors <- c('Additive Sire' = '#0081a7', 'Maternal' = '#f07167')
-c.d <- sapply(dimnames(p$interaction.mean)[[2]], function(m) {
-  smry <- lapply(p[c('sire.beta', 'maternal.beta')], function(x) {
-    paste(
-      paste0('median = ', round(median(x[m, ]), 3), '\n'),
-      paste0('mode = ', round(modeest::venter(x[m, ]), 3), '\n'),
-      paste0('95% = ', paste(round(HDInterval::hdi(x[m, ]), 3), collapse = ' - ')),
-      sep = '',
-      collapse = ''
-    )
-  })
-  
-  pred.pr.settle |> 
-    filter(metric == m & effect.type %in% c('Additive Sire', 'Maternal')) |>  
-    ggplot(aes(x = effect)) +
-    geom_hline(yintercept = mean(model.data$settle[, 1]), linetype = 'dashed') +
-    # geom_ribbon(aes(ymin = lower.hdi, ymax = upper.hdi, fill = effect.type), alpha = 0.5) +
-    geom_line(aes(y = median, color = effect.type), linewidth = 2) +  
-    scale_color_manual(values = effect.colors) +
-    # scale_fill_manual(values = effect.colors) +
-    annotate(
-      'text', 
-      x = -14.5, 
-      y = 0.02, 
-      label = paste('Additive Sire\n', smry[[1]], sep = '', collapse = ''),
-      size = 2.8,
-      hjust = 0,
-      vjust = 0,
-      color = effect.colors['Additive Sire']
-    ) +
-    annotate(
-      'text', 
-      x = 14.5, 
-      y = 0.02, 
-      label = paste('Maternal\n', smry[[2]], sep = '', collapse = ''),
-      size = 2.8,
-      hjust = 1,
-      vjust = 0,
-      color = effect.colors['Maternal']
-    ) +
-    coord_cartesian(xlim = c(-15, 15), ylim = c(0, 1), expand = FALSE) +
-    labs(
-      x = paste0('Marginal effect (', ifelse(m == 'head',"trunk", "tail"), ' length)'), 
-      y = 'Probability of settling',
-      title = ifelse(m == 'head', 'c)', 'd)')
-    ) +
-    theme(
       panel.grid = element_blank(),
-      legend.position = 'none'
+      # axis.title.x = element_text(hjust = 0.5),
+      # axis.title.y = element_text(hjust = 0.5),
+      axis.text.x = element_text(size = 8),
+      axis.text.y = element_text(size = 8),
+      axis.title = element_text(size = 10),
+      plot.title = element_text(size = 10, face = "plain")
     )
 }, simplify = FALSE)
 
 
-pdf('Figure Model IV.pdf', width = 6, height = 6)
-do.call(grid.arrange, c(a.b, c.d, ncol = 2))
+pdf('5_Figure_outputs/Figure 5.pdf', width = 5, height = 2.5)
+do.call(grid.arrange, c(a.b, ncol = 2, nrow = 1))
 dev.off()

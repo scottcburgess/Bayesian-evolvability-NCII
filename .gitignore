@@ -10,3 +10,4 @@ results/*
 .Rdata
 .httr-oauth
 .quarto
+old/

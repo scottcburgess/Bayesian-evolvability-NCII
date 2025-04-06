@@ -1,7 +1,7 @@
 rm(list = ls())
 library(tidyverse)
 
-df <- read.csv("Moccidentalis All Traits.csv") %>% 
+df <- read.csv("1_Data/Moccidentalis All Traits.csv") %>% 
   mutate(
     interaction = paste0("B", block, ".S", sire, "xD", dam),
     trait = ifelse(trait == "h.length", "head", trait),
@@ -30,11 +30,11 @@ df %>%
 df %>% 
   select(animal, block, interaction, sire, dam, head, tail) %>% 
   filter(!(is.na(head) & is.na(tail))) %>% 
-  saveRDS("head_tail_data.rds")
+  saveRDS("1_Data/head_tail_data.rds")
 
 df %>% 
   select(animal, block, interaction, sire, dam, hatching, settling) %>% 
   filter(!(is.na(hatching) & is.na(settling))) %>% 
   pivot_longer(c("hatching", "settling"), names_to = "metric", values_to = "outcome") %>% 
   filter(!is.na(outcome)) %>% 
-  saveRDS("hatch_settle_data.rds")
+  saveRDS("1_Data/hatch_settle_data.rds")
