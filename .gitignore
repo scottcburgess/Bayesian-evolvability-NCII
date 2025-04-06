@@ -4,9 +4,6 @@
 .Ruserdata
 .DS_Store
 *.Rproj
-*.html
-*.pdf
-results/*
 .Rdata
 .httr-oauth
 .quarto
