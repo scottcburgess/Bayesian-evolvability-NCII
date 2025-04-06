@@ -19,7 +19,7 @@ Powell JA, Archer FI, Burgess SC. In Prep. Evolvability of marine dispersal trai
 `head_tail_data.rds` formatted data for Model I and II in RDS format (see `?readRDS`).  <br />
 `hatch_settle.rds` formatted data for Models III and IV in RDS format (see `?readRDS`).  <br />
 
-**2_Model_R scripts** <br />
+**2_Model_R_scripts** <br />
 `Model_##.R` scripts for running Models I - IV.  <br />
 `0_misc_funcs.R` miscellaneous functions used in summary and figure making files.  <br />
 `1_load_and_format.R` load raw data and create formatted RDS files for use in models.  <br />
