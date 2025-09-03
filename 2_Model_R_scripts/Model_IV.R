@@ -2,7 +2,7 @@ rm(list = ls())
 library(tidyverse)
 library(runjags)
 library(parallel)
-source("0_misc_funcs.R")
+source("2_Model_R_scripts/0_misc_funcs.R")
 
 chains <- 14
 adapt <- 100
@@ -26,7 +26,7 @@ settle.df <- df %>%
   filter(block %in% blocks.to.keep & metric == "settling") %>% 
   select(-metric)
 
-length.df <- readRDS("head_tail_data.rds") 
+length.df <- readRDS("1_Data/head_tail_data.rds") 
 
 interactions <- intersect(settle.df$interaction, length.df$interaction)
 
