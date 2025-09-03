@@ -20,7 +20,7 @@ options(scipen = 10, digits = 3)
 rm(list = ls())
 library(tidyverse)
 library(runjags)
-load("Model_I_posterior_20230116_1944.rdata")
+load("3_Model_outputs/Model_I_posterior_20230116_1944.rdata")
 source("2_Model_R_scripts/0_misc_funcs.R")
 ```
 
