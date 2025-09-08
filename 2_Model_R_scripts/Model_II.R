@@ -2,15 +2,18 @@ rm(list = ls())
 library(tidyverse)
 library(runjags)
 
+# MCMC parameters
 chains <- 10
 adapt <- 100
 burnin <- 1000000
 total.sample <- 10000
 thin <- 100
 
-df <- readRDS("1_Data/head_tail_data.rds")
+# Load data
+df <- readRDS("../1_Data/head_tail_data.rds")
 df$log.ratio <- log(df$head / df$tail)
 
+# Run model
 post <- run.jags(
   data = list(
     n.blocks = length(unique(df$block)),
@@ -42,7 +45,7 @@ post <- run.jags(
       var.log.ratio.block[b] ~ dunif(0, 1e3)
     }
     additive.mean ~ dnorm(0, 1e-3)
-    maternal.mean ~ dnorm(0, 1e-3)
+    dam.mean ~ dnorm(0, 1e-3)
     interaction.mean ~ dnorm(0, 1e-3)
       
     # ---- variance priors ----
@@ -53,13 +56,12 @@ post <- run.jags(
   
     # ---- sire priors ----
     for(s in 1:n.sires) {
-      additive.sire.eff[s] ~ dnorm(additive.mean, 1 / additive.var)
+      additive.eff[s] ~ dnorm(additive.mean, 1 / additive.var)
     }
     
     # ---- dam priors ----
     for(d in 1:n.dams) {
-      additive.dam.eff[d] ~ dnorm(additive.mean, 1 / additive.var)
-      maternal.eff[d] ~ dnorm(maternal.mean, 1 / maternal.var)
+      maternal.eff[d, 1:2] ~ dmnorm.vcov(dam.mean - additive.mean, maternal.vcov)
     }
     
     # ---- interaction priors ----
@@ -73,10 +75,9 @@ post <- run.jags(
       log.ratio2[l] ~ dnorm(mean.log.ratio.block[block[l]], 1 / var.log.ratio.block[block[l]]) 
       
       mu[l] <- block.mean[block[l]] + 
-        additive.sire.eff[sire[l]] + 
-        additive.dam.eff[dam[l]] + 
-        maternal.eff[dam[l]] +
-        interaction.eff[interaction[l]]
+        (2 * additive.eff[sire[l], t]) + 
+        maternal.eff[dam[l], t] +
+        interaction.eff[interaction[l], t]
       log.ratio3[l] ~ dnorm(mu[l], 1 / resid.var)
     }
   }",
@@ -133,8 +134,8 @@ p$E <- var.obs$VA |>
   mutate(E = var.a.obs / (p$mean.overall ^ 2)) |> 
   pull('E')
 
-save.image(format(end, "3_Model_outputs/Model_II_posterior_%Y%m%d_%H%M.rdata"))
+save.image(format(end, "../3_Model_outputs/Model_II_posterior_%Y%m%d_%H%M.rdata"))
 
-plot(post, file = format(end, "3_Model_outputs/Model_II_plots_%Y%m%d_%H%M.pdf"))
+plot(post, file = format(end, "../3_Model_outputs/Model_II_plots_%Y%m%d_%H%M.pdf"))
 
 print(elapsed)

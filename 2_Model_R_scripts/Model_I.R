@@ -10,7 +10,7 @@ total.sample <- 50000
 thin <- 100
 
 # Load data
-df <- readRDS("1_Data/head_tail_data.rds") 
+df <- readRDS("../1_Data/head_tail_data.rds") 
 
 # Run model
 post <- run.jags(
@@ -40,7 +40,7 @@ post <- run.jags(
         block.mean[b, t] ~ dunif(length.range[1, t], length.range[2, t])
       }
       additive.mean[t] ~ dnorm(0, 1e-5)
-      maternal.mean[t] ~ dnorm(0, 1e-5)
+      dam.mean[t] ~ dnorm(0, 1e-5)
       interaction.mean[t] ~ dnorm(0, 1e-5)
       
       # ---- prior for variances ----
@@ -72,13 +72,12 @@ post <- run.jags(
     
     # ---- prior for additive sire effect (for each sire) ----
     for(s in 1:n.sires) {
-      additive.sire.eff[s, 1:2] ~ dmnorm.vcov(additive.mean, additive.vcov)
+      additive.eff[s, 1:2] ~ dmnorm.vcov(additive.mean, additive.vcov)
     }
     
     # ---- priors for additive dam & maternal effect (for each dam) ----
     for(d in 1:n.dams) {
-      additive.dam.eff[d, 1:2] ~ dmnorm.vcov(additive.mean, additive.vcov)
-      maternal.eff[d, 1:2] ~ dmnorm.vcov(maternal.mean, maternal.vcov)
+      maternal.eff[d, 1:2] ~ dmnorm.vcov(dam.mean - additive.mean, maternal.vcov)
     }
     
     # ---- prior for interaction effect (for each sire x dam interaction) ----
@@ -94,8 +93,7 @@ post <- run.jags(
         
         # expected mean for the l-th larvae and t-th trait
         mu[l, t] <- block.mean[block[l], t] + 
-          additive.sire.eff[sire[l], t] + 
-          additive.dam.eff[dam[l], t] + 
+          (2 * additive.eff[sire[l], t]) + 
           maternal.eff[dam[l], t] +
           interaction.eff[interaction[l], t]
       }
@@ -163,11 +161,11 @@ e.params_BetaMCMC <- evolvability::evolvabilityBetaMCMC(
 )
 
 # Save all objects and plot posterior summaries
-save.image(format(end, "3_Model_outputs/Model_I_posterior_%Y%m%d_%H%M.rdata"))
+save.image(format(end, "../3_Model_outputs/Model_I_posterior_%Y%m%d_%H%M.rdata"))
 
 plot(
   post, 
-  file = format(end, "3_Model_outputs/Model_I_plots_%Y%m%d_%H%M.pdf")
+  file = format(end, "../3_Model_outputs/Model_I_plots_%Y%m%d_%H%M.pdf")
 )
 
 print(elapsed)
