@@ -6,11 +6,11 @@ library(runjags)
 chains <- 10
 adapt <- 100
 burnin <- 50000
-total.sample <- 50000 
+total.sample <- 50000
 thin <- 100
 
 # Load data
-df <- readRDS("1_Data/hatch_settle_data.rds") 
+df <- readRDS("../1_Data/hatch_settle_data.rds") 
 
 # Only keep blocks with both hatching and settling data
 blocks.to.keep <- table(block = df$block, metric = df$metric) %>% 
@@ -55,7 +55,7 @@ post <- run.jags(
         pr.block[b, m] ~ dunif(0, 1)
       }
       additive.mean[m] ~ dnorm(0, 1e-6)
-      maternal.mean[m] ~ dnorm(0, 1e-6)
+      dam.mean[m] ~ dnorm(0, 1e-6)
       interaction.mean[m] ~ dnorm(0, 1e-6)
       
       # ---- prior for variances ----
@@ -81,13 +81,12 @@ post <- run.jags(
     
     # ---- prior for additive sire effect (for each sire) ----
     for(s in 1:n.sires) {
-      additive.sire.eff[s, 1:2] ~ dmnorm.vcov(additive.mean, additive.vcov)
+      additive.eff[s, 1:2] ~ dmnorm.vcov(additive.mean, additive.vcov)
     }
     
     # ---- priors for additive dam & maternal effect (for each dam) ----
     for(d in 1:n.dams) {
-      additive.dam.eff[d, 1:2] ~ dmnorm.vcov(additive.mean, additive.vcov)
-      maternal.eff[d, 1:2] ~ dmnorm.vcov(maternal.mean, maternal.vcov)
+      maternal.eff[d, 1:2] ~ dmnorm.vcov(dam.mean - additive.mean, maternal.vcov)
     }
     
     # ---- prior for interaction effect (for each sire x dam interaction) ----
@@ -101,8 +100,7 @@ post <- run.jags(
       outcome2[l] ~ dbern(pr.block[block[l], metric[l]])
       
       logit(pr[l]) <- block.mean[block[l], metric[l]] + 
-         additive.sire.eff[sire[l], metric[l]] + 
-         additive.dam.eff[dam[l], metric[l]] +
+         (2 * additive.eff[sire[l], metric[l]]) + 
          maternal.eff[dam[l], metric[l]] + 
          interaction.eff[interaction[l], metric[l]] 
       outcome3[l] ~ dbern(pr[l])
@@ -202,11 +200,11 @@ e.params_BetaMCMC <- evolvability::evolvabilityBetaMCMC(
 
 
 # Save all objects and plot posterior summaries
-save.image(format(end, "3_Model_outputs/Model_III_posterior_%Y%m%d_%H%M.rdata"))
+save.image(format(end, "../3_Model_outputs/Model_III_posterior_%Y%m%d_%H%M.rdata"))
 
 plot(
   post, 
-  file = format(end, "3_Model_outputs/Model_III_plots_%Y%m%d_%H%M.pdf")
+  file = format(end, "../3_Model_outputs/Model_III_plots_%Y%m%d_%H%M.pdf")
 )
 
 print(elapsed)
