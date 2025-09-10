@@ -43,8 +43,8 @@ smry <- summary(
 ) 
 ```
 ```{r}
-smry %>% 
-  as.data.frame() %>% 
+smry |> 
+  as.data.frame() |> 
   pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
 ```
 \newpage  
@@ -88,10 +88,10 @@ plot.metric(vd.va) + scale_x_log10()
 ```{r}
 comp.smry(p$H)
 
-p$H %>%
-  t() %>% 
-  as.data.frame() %>%
-  pivot_longer(everything()) %>%
+p$H |>
+  t() |> 
+  as.data.frame() |>
+  pivot_longer(everything()) |>
   ggplot(aes(value)) +
   geom_histogram(bins = 100) +
   labs(x = "Value", y = "Count") +
@@ -103,10 +103,10 @@ p$H %>%
 ```{r}
 comp.smry(p$E)
 
-p$E %>%
-  t() %>% 
-  as.data.frame() %>%
-  pivot_longer(everything()) %>%
+p$E |>
+  t() |> 
+  as.data.frame() |>
+  pivot_longer(everything()) |>
   ggplot(aes(value)) +
   geom_histogram(bins = 100) +
   labs(x = "Value", y = "Count") +
@@ -117,15 +117,15 @@ p$E %>%
 ```{r}
 e.ratio <- p$E[2, ] / p$E[1, ]
 
-e.ratio %>% 
-  log() %>% 
-  vecSmry() %>%
-  exp() %>% 
-  rbind() %>%
-  as.data.frame() %>%
+e.ratio |> 
+  log() |> 
+  vecSmry() |>
+  exp() |> 
+  rbind() |>
+  as.data.frame() |>
   pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
 
-data.frame(ratio = e.ratio) %>% 
+data.frame(ratio = e.ratio) |> 
   ggplot(aes(ratio)) +
   geom_histogram(bins = 100) +
   scale_x_log10() +

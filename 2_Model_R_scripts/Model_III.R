@@ -13,14 +13,14 @@ thin <- 100
 df <- readRDS("../1_Data/hatch_settle_data.rds") 
 
 # Only keep blocks with both hatching and settling data
-blocks.to.keep <- table(block = df$block, metric = df$metric) %>% 
-  as.data.frame() %>% 
-  filter(Freq > 0) %>% 
-  group_by(block) %>% 
-  summarize(n = n(), .groups = "drop") %>% 
-  filter(n == 2) %>% 
-  pull(block) %>% 
-  as.character() %>% 
+blocks.to.keep <- table(block = df$block, metric = df$metric) |> 
+  as.data.frame() |> 
+  filter(Freq > 0) |> 
+  group_by(block) |> 
+  summarize(n = n(), .groups = "drop") |> 
+  filter(n == 2) |> 
+  pull(block) |> 
+  as.character() |> 
   as.integer()
 df <- filter(df, block %in% blocks.to.keep)
 

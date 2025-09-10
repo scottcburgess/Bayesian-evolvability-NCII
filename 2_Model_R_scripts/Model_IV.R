@@ -12,18 +12,18 @@ thin <- 100
 
 df <- readRDS("1_Data/hatch_settle_data.rds") 
 
-blocks.to.keep <- table(block = df$block, metric = df$metric) %>% 
-  as.data.frame() %>% 
-  filter(Freq > 0) %>% 
-  group_by(block) %>% 
-  summarize(n = n(), .groups = "drop") %>% 
-  filter(n == 2) %>% 
-  pull(block) %>% 
-  as.character() %>% 
+blocks.to.keep <- table(block = df$block, metric = df$metric) |> 
+  as.data.frame() |> 
+  filter(Freq > 0) |> 
+  group_by(block) |> 
+  summarize(n = n(), .groups = "drop") |> 
+  filter(n == 2) |> 
+  pull(block) |> 
+  as.character() |> 
   as.integer()
 
-settle.df <- df %>% 
-  filter(block %in% blocks.to.keep & metric == "settling") %>% 
+settle.df <- df |> 
+  filter(block %in% blocks.to.keep & metric == "settling") |> 
   select(-metric)
 
 length.df <- readRDS("1_Data/head_tail_data.rds") 
@@ -33,20 +33,20 @@ interactions <- intersect(settle.df$interaction, length.df$interaction)
 settle.df <- filter(settle.df, interaction %in% interactions)
 length.df <- filter(length.df, interaction %in% interactions)
 
-int.df <- length.df %>% 
-  group_by(interaction) %>% 
+int.df <- length.df |> 
+  group_by(interaction) |> 
   summarize(
     block = unique(block),
     sire = unique(sire),
     dam = unique(dam),
     .groups = "drop"
-  ) %>% 
+  ) |> 
   mutate(
     block.num = as.numeric(factor(block)),
     sire.num = as.numeric(factor(sire)),
     dam.num = as.numeric(factor(dam)),
     interaction.num = as.numeric(factor(interaction))
-  ) %>% 
+  ) |> 
   select(-block, -sire, -dam)
 
 settle.df <- left_join(settle.df, int.df, by = "interaction")
@@ -184,14 +184,14 @@ pred.pr.settle <- lapply(colnames(sire.eff.x), function(m) {
         (p$sire.beta[m, ] * t(p$additive.sire.eff[model.data$sire[i], m, ])) +
         (p$maternal.beta[m, ] * t(p$maternal.eff[model.data$dam[i], m, ])) +
         (p$block.beta[m, ] * t(p$block.eff[model.data$block[i], m, ]))
-    }) %>% 
-      as.vector() %>% 
-      vecSmry() %>% 
-      plogis() %>% 
+    }) |> 
+      as.vector() |> 
+      vecSmry() |> 
+      plogis() |> 
       c(effect = x)
-  }, mc.cores = 14) %>% 
-    do.call(rbind, .) %>% 
-    as.data.frame() %>% 
+  }, mc.cores = 14) |> 
+    do.call(rbind, .) |> 
+    as.data.frame() |> 
     mutate(metric = m, effect.type = "Interaction Mean")
   
   sire <- mclapply(sire.eff.x[, m], function(x) {
@@ -201,14 +201,14 @@ pred.pr.settle <- lapply(colnames(sire.eff.x), function(m) {
         (p$sire.beta[m, ] * x) +
         (p$maternal.beta[m, ] * t(p$maternal.eff[model.data$dam[i], m, ])) +
         (p$block.beta[m, ] * t(p$block.eff[model.data$block[i], m, ]))
-    }) %>% 
-      as.vector() %>% 
-      vecSmry() %>% 
-      plogis() %>% 
+    }) |> 
+      as.vector() |> 
+      vecSmry() |> 
+      plogis() |> 
       c(effect = x)
-  }, mc.cores = 14) %>% 
-    do.call(rbind, .) %>% 
-    as.data.frame() %>% 
+  }, mc.cores = 14) |> 
+    do.call(rbind, .) |> 
+    as.data.frame() |> 
     mutate(metric = m, effect.type = "Additive Sire")
   
   maternal <- mclapply(maternal.eff.x[, m], function(x) {
@@ -218,14 +218,14 @@ pred.pr.settle <- lapply(colnames(sire.eff.x), function(m) {
         (p$sire.beta[m, ] * t(p$additive.sire.eff[model.data$sire[i], m, ])) +
         p$maternal.beta[m, ] * x +
         (p$block.beta[m, ] * t(p$block.eff[model.data$block[i], m, ]))
-    }) %>% 
-      as.vector() %>% 
-      vecSmry() %>% 
-      plogis() %>% 
+    }) |> 
+      as.vector() |> 
+      vecSmry() |> 
+      plogis() |> 
       c(effect = x)
-  }, mc.cores = 14) %>% 
-    do.call(rbind, .) %>% 
-    as.data.frame() %>% 
+  }, mc.cores = 14) |> 
+    do.call(rbind, .) |> 
+    as.data.frame() |> 
     mutate(metric = m, effect.type = "Maternal")
   
   block <- mclapply(block.eff.x[, m], function(x) {
@@ -235,18 +235,18 @@ pred.pr.settle <- lapply(colnames(sire.eff.x), function(m) {
         (p$sire.beta[m, ] * t(p$additive.sire.eff[model.data$sire[i], m, ])) +
         (p$maternal.beta[m, ] * t(p$maternal.eff[model.data$dam[i], m, ])) +
         (p$block.beta[m, ] * x)
-    }) %>% 
-      as.vector() %>% 
-      vecSmry() %>% 
-      plogis() %>% 
+    }) |> 
+      as.vector() |> 
+      vecSmry() |> 
+      plogis() |> 
       c(effect = x)
-  }, mc.cores = 14) %>% 
-    do.call(rbind, .) %>% 
-    as.data.frame() %>% 
+  }, mc.cores = 14) |> 
+    do.call(rbind, .) |> 
+    as.data.frame() |> 
     mutate(metric = m, effect.type = "Block")
   
   bind_rows(int, sire, maternal, block)
-}) %>% 
+}) |> 
   bind_rows()
 
 save.image(format(end, "3_Model_outputs/Model_IV_posterior_%Y%m%d_%H%M.rdata"))

@@ -3,22 +3,22 @@
 rm(list = ls())
 library(tidyverse)
 
-df <- read.csv("1_Data/Moccidentalis All Traits_updated.csv") %>% 
+df <- read.csv("1_Data/Moccidentalis All Traits_updated.csv") |> 
   mutate(
     interaction = paste0("B", block, ".S", sire, "xD", dam),
     trait = ifelse(trait == "h.length", "head", trait),
     trait = ifelse(trait == "n.length", "tail", trait)
-  ) %>% 
-  pivot_wider(names_from = "trait", values_from = "value") %>% 
+  ) |> 
+  pivot_wider(names_from = "trait", values_from = "value") |> 
   # only keep blocks with more than 1 sire and dam
-  group_by(block) %>% 
-  mutate(to.keep = n_distinct(sire) > 1 & n_distinct(dam) > 1) %>%
-  ungroup() %>% 
-  filter(to.keep) %>% 
+  group_by(block) |> 
+  mutate(to.keep = n_distinct(sire) > 1 & n_distinct(dam) > 1) |>
+  ungroup() |> 
+  filter(to.keep) |> 
   select(-to.keep)  
 
-df %>%
-  group_by(block) %>% 
+df |>
+  group_by(block) |> 
   summarize(
     num.larvae = n_distinct(animal),
     num.sires = n_distinct(sire),
@@ -29,14 +29,14 @@ df %>%
     .groups = "drop"
   )
 
-df %>% 
-  select(animal, block, dish, interaction, sire, dam, head, tail) %>% 
-  filter(!(is.na(head) & is.na(tail))) %>% 
+df |> 
+  select(animal, block, dish, interaction, sire, dam, head, tail) |> 
+  filter(!(is.na(head) & is.na(tail))) |> 
   saveRDS("1_Data/head_tail_data_updated.rds")
 
-df %>% 
-  select(animal, block, dish, interaction, sire, dam, hatching, settling) %>% 
-  filter(!(is.na(hatching) & is.na(settling))) %>% 
-  pivot_longer(c("hatching", "settling"), names_to = "metric", values_to = "outcome") %>% 
-  filter(!is.na(outcome)) %>% 
+df |> 
+  select(animal, block, dish, interaction, sire, dam, hatching, settling) |> 
+  filter(!(is.na(hatching) & is.na(settling))) |> 
+  pivot_longer(c("hatching", "settling"), names_to = "metric", values_to = "outcome") |> 
+  filter(!is.na(outcome)) |> 
   saveRDS("1_Data/hatch_settle_data_updated.rds")

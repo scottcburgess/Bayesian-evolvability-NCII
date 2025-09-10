@@ -25,7 +25,7 @@ E_head_tail <- data.frame(name = c(rep("eB",length(eB_posterior_head_tail)),
                                        rB_posterior_head_tail,
                                        cB_posterior_head_tail))
 
-E_head_tail <- E_head_tail %>% 
+E_head_tail <- E_head_tail |> 
   mutate(name = factor(name, levels = c("eB","rB","cB")))
 
 
@@ -47,7 +47,7 @@ E_hatch_settle <- data.frame(name = c(rep("eB",length(eB_posterior_hatch_settle)
                                        rB_posterior_hatch_settle,
                                        cB_posterior_hatch_settle))
     
-E_hatch_settle <- E_hatch_settle %>% 
+E_hatch_settle <- E_hatch_settle |> 
   mutate(name = factor(name, levels = c("eB","rB","cB")))
 
 
@@ -77,9 +77,9 @@ bw2 <- 0.001
 sc <- 0.9
 
 ## Panel A ----
-summaries <- E_head_tail %>%
-  group_by(name) %>%
-  summarise(summary_values = list(vecSmry(value)), .groups = 'drop') %>%
+summaries <- E_head_tail |>
+  group_by(name) |>
+  summarise(summary_values = list(vecSmry(value)), .groups = 'drop') |>
   unnest_wider(summary_values, names_repair = "unique")
 
 
@@ -127,9 +127,9 @@ panelA <- ggplot(E_head_tail,
                                 "cB" = vc_color[3,]))
 
 ## Panel B ----
-summaries <- E_hatch_settle %>%
-  group_by(name) %>%
-  summarise(summary_values = list(vecSmry(value)), .groups = 'drop') %>%
+summaries <- E_hatch_settle |>
+  group_by(name) |>
+  summarise(summary_values = list(vecSmry(value)), .groups = 'drop') |>
   unnest_wider(summary_values, names_repair = "unique")
 
 
@@ -192,8 +192,8 @@ dev.off()
 
 
 # Summaries ----
-tmp <- E_hatch_settle %>% filter(name=="eB") %>% select("value")
+tmp <- E_hatch_settle |> filter(name=="eB") |> select("value")
 round(vecSmry(tmp$value),4) # Head VA (proportion)
 
-tmp <- E_head_tail %>% filter(name=="eB") %>% select("value")
+tmp <- E_head_tail |> filter(name=="eB") |> select("value")
 round(vecSmry(tmp$value),6) # Tail VA (proportion)

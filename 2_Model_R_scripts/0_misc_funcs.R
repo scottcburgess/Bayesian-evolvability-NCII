@@ -20,9 +20,9 @@ comp.smry <- function(x, gt = 0) {
         c(result, mean(xi > gt)), 
         c(names(result), paste0("pct.gt.", gt))
       )
-    })) %>% 
-      as.data.frame() %>% 
-      mutate(measure = c(metrics, "cov")) %>% 
+    })) |> 
+      as.data.frame() |> 
+      mutate(measure = c(metrics, "cov")) |> 
       column_to_rownames("measure")
   }
   pander::pander(df, split.tables = Inf, keep.line.breaks = TRUE)
@@ -32,8 +32,8 @@ comp.smry <- function(x, gt = 0) {
 plot.metric <- function(x) {
   library(tidyverse)
   if(is.null(dim(x))) {
-    x %>% 
-      enframe() %>%
+    x |> 
+      enframe() |>
       ggplot(aes(value)) +
       geom_histogram(bins = 100) +
       labs(x = "Value", y = "Count")
@@ -41,11 +41,11 @@ plot.metric <- function(x) {
     metrics <- dimnames(x)[[1]]
     sapply(c(lapply(metrics, rep, times = 2), list(metrics)), function(i) {
       x[i[1], i[2], ]
-    }) %>% 
-      as.data.frame() %>% 
-      setNames(c(metrics, "cov")) %>% 
-      pivot_longer(everything()) %>% 
-      mutate(name = factor(name, levels = c(metrics, "cov"))) %>% 
+    }) |> 
+      as.data.frame() |> 
+      setNames(c(metrics, "cov")) |> 
+      pivot_longer(everything()) |> 
+      mutate(name = factor(name, levels = c(metrics, "cov"))) |> 
       ggplot(aes(value)) +
       geom_histogram(bins = 100) +
       labs(x = "Value", y = "Count") +

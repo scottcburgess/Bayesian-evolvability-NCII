@@ -124,7 +124,7 @@ convertVarScale <- function(metric, p) {
       ),
       verbose = FALSE
     )
-  }) %>% 
+  }) |> 
     bind_rows()
 }
 var.obs <- sapply(c('VA', 'VM', 'VD'), convertVarScale, p = p, simplify = FALSE)
