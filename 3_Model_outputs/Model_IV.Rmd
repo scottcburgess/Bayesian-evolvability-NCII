@@ -44,8 +44,8 @@ smry <- summary(
 )
 ```
 ```{r}
-smry %>% 
-  as.data.frame() %>% 
+smry |> 
+  as.data.frame() |> 
   pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
 ```
 
@@ -68,18 +68,18 @@ for(m in dimnames(p$interaction.mean)[[2]]) {
         (p$sire.beta[m, ] * t(p$additive.sire.eff[model.data$sire[i], m, ])) +
         (p$maternal.beta[m, ] * t(p$maternal.eff[model.data$dam[i], m, ])) +
         (p$block.beta[m, ] * t(p$block.eff[model.data$block[i], m, ]))
-    }) %>%
-      as.vector() %>%
-      plogis() %>%
-      cut(pr.breaks, include.lowest = TRUE) %>%
+    }) |>
+      as.vector() |>
+      plogis() |>
+      cut(pr.breaks, include.lowest = TRUE) |>
       table()
-  }, mc.cores = 10) %>% 
-    do.call(cbind, .) %>% 
-    as.data.frame() %>% 
-    remove_rownames() %>% 
-    setNames(int.breaks) %>% 
-    mutate(pr.settle = apply(cbind(pr.breaks[-n.pts], pr.breaks[-1]), 1, mean)) %>% 
-    pivot_longer(-pr.settle, names_to = "interaction.mean", values_to = "freq") %>% 
+  }, mc.cores = 10) |> 
+    do.call(cbind, .) |> 
+    as.data.frame() |> 
+    remove_rownames() |> 
+    setNames(int.breaks) |> 
+    mutate(pr.settle = apply(cbind(pr.breaks[-n.pts], pr.breaks[-1]), 1, mean)) |> 
+    pivot_longer(-pr.settle, names_to = "interaction.mean", values_to = "freq") |> 
     mutate(
       interaction.mean = as.numeric(interaction.mean),
       interaction.mean.lik = dnorm(interaction.mean, mean(p$interaction.mean[, m, ]), sd(p$interaction.mean[, m, ])),
@@ -104,21 +104,21 @@ for(m in dimnames(p$interaction.mean)[[2]]) {
 ### Beta summary
 ```{r}
 pct.gt.0 <- apply(p$int.beta, 1, function(x) mean(x > 0))
-p$int.beta %>% 
-  apply(1, vecSmry) %>% 
-  t() %>% 
-  as.data.frame() %>% 
-  mutate(pct.gt.0 = pct.gt.0) %>% 
+p$int.beta |> 
+  apply(1, vecSmry) |> 
+  t() |> 
+  as.data.frame() |> 
+  mutate(pct.gt.0 = pct.gt.0) |> 
   pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
 ```
 ### Effect summary
 ```{r, fig.width = 12, fig.height = 30}
-as.data.frame.table(p$interaction.mean) %>% 
-  setNames(c("int", "metric", "iter", "effect")) %>% 
+as.data.frame.table(p$interaction.mean) |> 
+  setNames(c("int", "metric", "iter", "effect")) |> 
   mutate(
     int = as.numeric(int),
     iter = as.numeric(as.character(iter))
-  ) %>% 
+  ) |> 
   ggplot(aes(effect)) +
   geom_histogram(bins = 50, alpha = 0.7) +
   labs(x = "Interaction mean", y = "Count") +
@@ -127,8 +127,8 @@ as.data.frame.table(p$interaction.mean) %>%
 
 ## Marginal Effects
 ```{r, fig.width = 8, fig.height = 8}
-pred.pr.settle %>% 
-  filter(effect.type != "Interaction Mean") %>% 
+pred.pr.settle |> 
+  filter(effect.type != "Interaction Mean") |> 
   ggplot(aes(x = effect)) + 
   geom_hline(yintercept = mean(model.data$settle[, 1]), linetype = "dashed") +
   geom_line(aes(y = median, color = effect.type)) +
@@ -141,28 +141,28 @@ pred.pr.settle %>%
 ### Beta summary
 ```{r}
 pct.gt.0 <- apply(p$maternal.beta, 1, function(x) mean(x > 0))
-p$maternal.beta %>% 
-  apply(1, vecSmry) %>% 
-  t() %>% 
-  as.data.frame() %>% 
-  mutate(pct.gt.0 = pct.gt.0) %>% 
+p$maternal.beta |> 
+  apply(1, vecSmry) |> 
+  t() |> 
+  as.data.frame() |> 
+  mutate(pct.gt.0 = pct.gt.0) |> 
   pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
 ```
 ### Effect summary
 ```{r, fig.width = 12, fig.height = 12}
-as.data.frame.table(p$maternal.eff) %>% 
-  setNames(c("dam", "metric", "iter", "effect")) %>% 
+as.data.frame.table(p$maternal.eff) |> 
+  setNames(c("dam", "metric", "iter", "effect")) |> 
   mutate(
     dam = as.numeric(dam),
     iter = as.numeric(as.character(iter))
-  ) %>% 
+  ) |> 
   ggplot(aes(effect)) +
   geom_vline(xintercept = 0, color = "red") +
   geom_histogram(bins = 50, alpha = 0.7) +
   xlim(
-    pred.pr.settle %>% 
-      filter(effect.type == "Maternal") %>% 
-      pull(effect) %>% 
+    pred.pr.settle |> 
+      filter(effect.type == "Maternal") |> 
+      pull(effect) |> 
       range()
   ) +
   labs(x = "Maternal effect", y = "Count") +
@@ -173,28 +173,28 @@ as.data.frame.table(p$maternal.eff) %>%
 ### Beta summary
 ```{r}
 pct.gt.0 <- apply(p$sire.beta, 1, function(x) mean(x > 0))
-p$sire.beta %>% 
-  apply(1, vecSmry) %>% 
-  t() %>% 
-  as.data.frame() %>% 
-  mutate(pct.gt.0 = pct.gt.0) %>% 
+p$sire.beta |> 
+  apply(1, vecSmry) |> 
+  t() |> 
+  as.data.frame() |> 
+  mutate(pct.gt.0 = pct.gt.0) |> 
   pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
 ```
 ### Effect summary
 ```{r, fig.width = 12, fig.height = 12}
-as.data.frame.table(p$additive.sire.eff) %>% 
-  setNames(c("sire", "metric", "iter", "effect")) %>% 
+as.data.frame.table(p$additive.sire.eff) |> 
+  setNames(c("sire", "metric", "iter", "effect")) |> 
   mutate(
     sire = as.numeric(sire),
     iter = as.numeric(as.character(iter))
-  ) %>% 
+  ) |> 
   ggplot(aes(effect)) +
   geom_vline(xintercept = 0, color = "red") +
   geom_histogram(bins = 50, alpha = 0.7) +
   xlim(
-    pred.pr.settle %>% 
-      filter(effect.type == "Additive Sire") %>% 
-      pull(effect) %>% 
+    pred.pr.settle |> 
+      filter(effect.type == "Additive Sire") |> 
+      pull(effect) |> 
       range()
   ) +
   labs(x = "Additive sire effect", y = "Count") +
@@ -205,28 +205,28 @@ as.data.frame.table(p$additive.sire.eff) %>%
 ### Beta summary
 ```{r}
 pct.gt.0 <- apply(p$block.beta, 1, function(x) mean(x > 0))
-p$block.beta %>% 
-  apply(1, vecSmry) %>% 
-  t() %>% 
-  as.data.frame() %>% 
-  mutate(pct.gt.0 = pct.gt.0) %>% 
+p$block.beta |> 
+  apply(1, vecSmry) |> 
+  t() |> 
+  as.data.frame() |> 
+  mutate(pct.gt.0 = pct.gt.0) |> 
   pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
 ```
 ### Effect summary
 ```{r, fig.width = 12, fig.height = 12}
-as.data.frame.table(p$block.eff) %>% 
-  setNames(c("block", "metric", "iter", "effect")) %>% 
+as.data.frame.table(p$block.eff) |> 
+  setNames(c("block", "metric", "iter", "effect")) |> 
   mutate(
     block = as.numeric(block),
     iter = as.numeric(as.character(iter))
-  ) %>% 
+  ) |> 
   ggplot(aes(effect)) +
   geom_vline(xintercept = 0, color = "red") +
   geom_histogram(bins = 50, alpha = 0.7) +
   xlim(
-    pred.pr.settle %>% 
-      filter(effect.type == "Block") %>% 
-      pull(effect) %>% 
+    pred.pr.settle |> 
+      filter(effect.type == "Block") |> 
+      pull(effect) |> 
       range()
   ) +
   labs(x = "Block effect", y = "Count") +

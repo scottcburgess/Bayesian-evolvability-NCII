@@ -25,8 +25,8 @@ tmp <- data.frame(
   TailVR = (p$VP[2,2,] - (p$VA[2,2,] + p$VM[2,2,] + p$VD[2,2,])) / p$VP[2,2,]
   )
 
-d_headtail <- tmp %>% 
-  pivot_longer(cols = everything(), cols_vary = 'slowest') %>% 
+d_headtail <- tmp |> 
+  pivot_longer(cols = everything(), cols_vary = 'slowest') |> 
   as.data.frame()
 
 
@@ -41,8 +41,8 @@ tmp <- data.frame(
   ratioVM = vcv.obs$VM$var.a.obs / vcv.obs$VM$var.obs,
   ratioVD = vcv.obs$VD$var.a.obs / vcv.obs$VD$var.obs)
 
-d_headtail_ratio <- tmp %>% 
-  pivot_longer(cols = everything(), cols_vary = 'slowest') %>% 
+d_headtail_ratio <- tmp |> 
+  pivot_longer(cols = everything(), cols_vary = 'slowest') |> 
   as.data.frame()
 
 
@@ -66,8 +66,8 @@ tmp <- data.frame(
   )
 
 
-d_hatchsettle <- tmp %>% 
-  pivot_longer(cols = everything(), cols_vary = 'slowest') %>% 
+d_hatchsettle <- tmp |> 
+  pivot_longer(cols = everything(), cols_vary = 'slowest') |> 
   as.data.frame()
 
 
@@ -96,13 +96,13 @@ sc <- 0.9
 ## Panel A ----
 names_to_use <- c("HeadVA", "HeadVM", "HeadVD", "HeadVR")
 
-d <- d_headtail %>%
-  filter(name %in% names_to_use) %>% 
+d <- d_headtail |>
+  filter(name %in% names_to_use) |> 
   mutate(name = factor(name, levels = rev(names_to_use)))
 
-summaries <- d %>%
-  group_by(name) %>%
-  summarise(summary_values = list(vecSmry(value)), .groups = 'drop') %>%
+summaries <- d |>
+  group_by(name) |>
+  summarise(summary_values = list(vecSmry(value)), .groups = 'drop') |>
   unnest_wider(summary_values, names_repair = "unique")
 
 
@@ -155,13 +155,13 @@ panelA <- ggplot(d,
 ## Panel B ----
 names_to_use <- c("TailVA", "TailVM", "TailVD", "TailVR")
 
-d <- d_headtail %>%
-  filter(name %in% names_to_use) %>% 
+d <- d_headtail |>
+  filter(name %in% names_to_use) |> 
   mutate(name = factor(name, levels = rev(names_to_use)))
 
-summaries <- d %>%
-  group_by(name) %>%
-  summarise(summary_values = list(vecSmry(value)), .groups = 'drop') %>%
+summaries <- d |>
+  group_by(name) |>
+  summarise(summary_values = list(vecSmry(value)), .groups = 'drop') |>
   unnest_wider(summary_values, names_repair = "unique")
 
 
@@ -218,13 +218,13 @@ scale_fill_manual(values = c("TailVA" = vc_color[4,],
 ## Panel C ----
 names_to_use <- c("ratioVA", "ratioVM", "ratioVD")
 
-d <- d_headtail_ratio %>%
-  filter(name %in% names_to_use) %>% 
+d <- d_headtail_ratio |>
+  filter(name %in% names_to_use) |> 
   mutate(name = factor(name, levels = rev(names_to_use)))
 
-summaries <- d %>%
-  group_by(name) %>%
-  summarise(summary_values = list(vecSmry(value)), .groups = 'drop') %>%
+summaries <- d |>
+  group_by(name) |>
+  summarise(summary_values = list(vecSmry(value)), .groups = 'drop') |>
   unnest_wider(summary_values, names_repair = "unique")
 
 
@@ -275,13 +275,13 @@ panelC <- ggplot(d,
 ## Panel D ----
 names_to_use <- c("HatchVA", "HatchVM", "HatchVD")
 
-d <- d_hatchsettle %>%
-  filter(name %in% names_to_use) %>% 
+d <- d_hatchsettle |>
+  filter(name %in% names_to_use) |> 
   mutate(name = factor(name, levels = rev(names_to_use)))
 
-summaries <- d %>%
-  group_by(name) %>%
-  summarise(summary_values = list(vecSmry(value)), .groups = 'drop') %>%
+summaries <- d |>
+  group_by(name) |>
+  summarise(summary_values = list(vecSmry(value)), .groups = 'drop') |>
   unnest_wider(summary_values, names_repair = "unique")
 
 
@@ -332,13 +332,13 @@ panelD <- ggplot(d,
 ## Panel E ----
 names_to_use <- c("SettleVA", "SettleVM", "SettleVD")
 
-d <- d_hatchsettle %>%
-  filter(name %in% names_to_use) %>% 
+d <- d_hatchsettle |>
+  filter(name %in% names_to_use) |> 
   mutate(name = factor(name, levels = rev(names_to_use)))
 
-summaries <- d %>%
-  group_by(name) %>%
-  summarise(summary_values = list(vecSmry(value)), .groups = 'drop') %>%
+summaries <- d |>
+  group_by(name) |>
+  summarise(summary_values = list(vecSmry(value)), .groups = 'drop') |>
   unnest_wider(summary_values, names_repair = "unique")
 
 
@@ -404,35 +404,35 @@ dev.off()
 
 
 # Summaries ----
-tmp <- d_headtail %>% filter(name=="HeadVA") %>% select("value")
+tmp <- d_headtail |> filter(name=="HeadVA") |> select("value")
 round(vecSmry(tmp$value),4) # Head VA (proportion)
-tmp <- d_headtail %>% filter(name=="HeadVM") %>% select("value")
+tmp <- d_headtail |> filter(name=="HeadVM") |> select("value")
 round(vecSmry(tmp$value),4) # Head VM (proportion)
-tmp <- d_headtail %>% filter(name=="HeadVD") %>% select("value")
+tmp <- d_headtail |> filter(name=="HeadVD") |> select("value")
 round(vecSmry(tmp$value),4) # Head VM (proportion)
 
 
 
-tmp <- d_headtail %>% filter(name=="TailVA") %>% select("value")
+tmp <- d_headtail |> filter(name=="TailVA") |> select("value")
 round(vecSmry(tmp$value),4) # Head VA (proportion)
-tmp <- d_headtail %>% filter(name=="TailVM") %>% select("value")
+tmp <- d_headtail |> filter(name=="TailVM") |> select("value")
 round(vecSmry(tmp$value),4) # Head VM (proportion)
-tmp <- d_headtail %>% filter(name=="TailVD") %>% select("value")
+tmp <- d_headtail |> filter(name=="TailVD") |> select("value")
 round(vecSmry(tmp$value),4) # Head VM (proportion)
 
 
-tmp <- d_hatchsettle %>% filter(name=="HatchVA") %>% select("value")
+tmp <- d_hatchsettle |> filter(name=="HatchVA") |> select("value")
 round(vecSmry(tmp$value),4) # Hatch VA (proportion)
-tmp <- d_hatchsettle %>% filter(name=="HatchVM") %>% select("value")
+tmp <- d_hatchsettle |> filter(name=="HatchVM") |> select("value")
 round(vecSmry(tmp$value),4) # Hatch VM (proportion)
-tmp <- d_hatchsettle %>% filter(name=="HatchVD") %>% select("value")
+tmp <- d_hatchsettle |> filter(name=="HatchVD") |> select("value")
 round(vecSmry(tmp$value),4) # Hatch VD (proportion)
 
-tmp <- d_hatchsettle %>% filter(name=="SettleVA") %>% select("value")
+tmp <- d_hatchsettle |> filter(name=="SettleVA") |> select("value")
 round(vecSmry(tmp$value),4) # Settle VA (proportion)
-tmp <- d_hatchsettle %>% filter(name=="SettleVM") %>% select("value")
+tmp <- d_hatchsettle |> filter(name=="SettleVM") |> select("value")
 round(vecSmry(tmp$value),4) # Settle VM (proportion)
-tmp <- d_hatchsettle %>% filter(name=="SettleVD") %>% select("value")
+tmp <- d_hatchsettle |> filter(name=="SettleVD") |> select("value")
 round(vecSmry(tmp$value),4) # Settle VD (proportion)
 
 

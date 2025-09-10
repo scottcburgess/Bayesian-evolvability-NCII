@@ -20,16 +20,16 @@ library(patchwork)
 df_head_tail <- readRDS("1_Data/head_tail_data.rds") 
 df_hatch_settle <- readRDS("1_Data/hatch_settle_data.rds") 
 
-blocks_to_use <- df_hatch_settle %>% 
-  filter(metric == "settling") %>% 
-  pull(block) %>%
+blocks_to_use <- df_hatch_settle |> 
+  filter(metric == "settling") |> 
+  pull(block) |>
   unique()
 
-df <- df_hatch_settle %>% 
-  filter(metric == "settling") %>% 
-  bind_rows(df_head_tail) %>% 
-  select(animal, block, interaction, sire, dam, outcome, head, tail) %>% 
-  rename(settle = outcome) %>% 
+df <- df_hatch_settle |> 
+  filter(metric == "settling") |> 
+  bind_rows(df_head_tail) |> 
+  select(animal, block, interaction, sire, dam, outcome, head, tail) |> 
+  rename(settle = outcome) |> 
   filter(block %in% blocks_to_use)
 
 df$block <- factor(df$block)
@@ -87,8 +87,8 @@ G_cols <- grep("sire|dam|interaction", colnames(model$VCV), value = TRUE)
 G_df <- model$VCV[, G_cols]
 
 # Convert to long format for plotting
-G_long <- as.data.frame(G_df) %>%
-  mutate(iter = 1:nrow(.)) %>%
+G_long <- as.data.frame(G_df) |>
+  mutate(iter = 1:nrow(.)) |>
   pivot_longer(-iter, names_to = "parameter", values_to = "value")
 
 # Create PDF
@@ -96,7 +96,7 @@ pdf("3_Model_outputs/Model_IV_MCMCglmm_density_trace.pdf", width = 7, height = 8
 
 for (param in unique(G_long$parameter)) {
   
-  df_param <- G_long %>% filter(parameter == param)
+  df_param <- G_long |> filter(parameter == param)
   
   # Density plot
   mode_est <- modeest::mlv(df_param$value, method = "venter")

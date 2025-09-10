@@ -10,29 +10,29 @@ df_hatch_settle <- readRDS("1_Data/hatch_settle_data.rds")
 # Head - Tail
 # Remove the fixed effects of block, 
 # then calculate residuals, for plotting
-df_head_tail <- df_head_tail %>% 
-  group_by(block) %>% 
+df_head_tail <- df_head_tail |> 
+  group_by(block) |> 
   reframe(sire = sire,
           head.resid = head - mean(head, na.rm=T),
           tail.resid = tail - mean(tail, na.rm=T))
 
 # Calculate the sire averages
-sire_means_head_tail <- df_head_tail %>% 
-  group_by(sire) %>% 
+sire_means_head_tail <- df_head_tail |> 
+  group_by(sire) |> 
   summarize(mean.head.resid = mean(head.resid),
             mean.tail.resid = mean(tail.resid))
 
 # Hatch - Settle
 # Calculate the family averages
-family_means_hatch_settle <- df_hatch_settle %>% 
-  group_by(block, interaction, metric) %>% 
-  summarize(mean = mean(outcome)) %>% 
+family_means_hatch_settle <- df_hatch_settle |> 
+  group_by(block, interaction, metric) |> 
+  summarize(mean = mean(outcome)) |> 
   pivot_wider(names_from = metric,
               values_from = mean)
 
 # Remove block effects 
-family_means_hatch_settle <- family_means_hatch_settle %>% 
-  group_by(block) %>% 
+family_means_hatch_settle <- family_means_hatch_settle |> 
+  group_by(block) |> 
   reframe(hatch.resid = hatching - mean(hatching, na.rm=T),
           settle.resid = settling - mean(settling, na.rm=T))
 

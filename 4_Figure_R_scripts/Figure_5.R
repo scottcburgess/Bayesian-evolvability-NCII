@@ -21,18 +21,18 @@ a.b <- sapply(dimnames(p$interaction.mean)[[2]], function(m) {
         (p$sire.beta[m, ] * t(p$additive.sire.eff[model.data$sire[i], m, ])) +
         (p$maternal.beta[m, ] * t(p$maternal.eff[model.data$dam[i], m, ])) +
         (p$block.beta[m, ] * t(p$block.eff[model.data$block[i], m, ]))
-    }) %>%
-      as.vector() %>%
-      plogis() %>%
-      cut(pr.breaks, include.lowest = TRUE) %>%
+    }) |>
+      as.vector() |>
+      plogis() |>
+      cut(pr.breaks, include.lowest = TRUE) |>
       table()
-  }, mc.cores = 10) %>% 
-    do.call(cbind, .) %>% 
-    as.data.frame() %>% 
-    remove_rownames() %>% 
-    setNames(int.breaks) %>% 
-    mutate(pr.settle = apply(cbind(pr.breaks[-length(pr.breaks)], pr.breaks[-1]), 1, mean)) %>% 
-    pivot_longer(-pr.settle, names_to = 'interaction.mean', values_to = 'freq') %>% 
+  }, mc.cores = 10) |> 
+    do.call(cbind, .) |> 
+    as.data.frame() |> 
+    remove_rownames() |> 
+    setNames(int.breaks) |> 
+    mutate(pr.settle = apply(cbind(pr.breaks[-length(pr.breaks)], pr.breaks[-1]), 1, mean)) |> 
+    pivot_longer(-pr.settle, names_to = 'interaction.mean', values_to = 'freq') |> 
     mutate(
       interaction.mean = as.numeric(interaction.mean),
       interaction.mean.lik = dnorm(interaction.mean, mean(p$interaction.mean[, m, ]), sd(p$interaction.mean[, m, ])),
