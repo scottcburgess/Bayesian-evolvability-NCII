@@ -6,4 +6,7 @@
 .httr-oauth
 .quarto
 *.rdata
+*.html
+*.pdf
 old/
+Manuscript/
