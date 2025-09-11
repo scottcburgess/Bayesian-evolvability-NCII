@@ -20,7 +20,7 @@ options(scipen = 10, digits = 3)
 rm(list = ls())
 library(tidyverse)
 library(runjags)
-load("../3_Model_outputs/Model_I_posterior_20250909_1718.rdata")
+load("../3_Model_outputs/Model_I_posterior_20250910_2306.rdata")
 source("../2_Model_R_scripts/0_misc_funcs.R")
 ```
 
@@ -39,7 +39,7 @@ End Time: `r format(end, "%Y-%m-%d %H:%M")`
 smry <- summary(
   post, 
   vars = c(
-    "deviance", "additive.vcov", "maternal.vcov", 
+    "deviance", "sire.vcov", "dam.vcov", 
     "interaction.vcov", "resid.vcov"
   )
 )
