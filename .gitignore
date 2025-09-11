@@ -6,4 +6,5 @@
 .httr-oauth
 .quarto
 *.rdata
+*.html
 old/
