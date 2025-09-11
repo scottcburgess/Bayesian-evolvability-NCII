@@ -61,7 +61,7 @@ post <- run.jags(
     
     # ---- dam priors ----
     for(d in 1:n.dams) {
-      dam.eff[d, 1:2] ~ dmnorm.vcov(dam.mean, 1 / dam.var)
+      dam.eff[d] ~ dmnorm.vcov(dam.mean, 1 / dam.var)
     }
     
     # ---- interaction priors ----
@@ -75,9 +75,9 @@ post <- run.jags(
       log.ratio2[l] ~ dnorm(mean.log.ratio.block[block[l]], 1 / var.log.ratio.block[block[l]]) 
       
       mu[l] <- block.mean[block[l]] + 
-        sire.eff[sire[l], t] + 
-        dam.eff[dam[l], t] +
-        interaction.eff[interaction[l], t]
+        sire.eff[sire[l]] + 
+        dam.eff[dam[l]] +
+        interaction.eff[interaction[l]]
       log.ratio3[l] ~ dnorm(mu[l], 1 / resid.var)
     }
   }",
