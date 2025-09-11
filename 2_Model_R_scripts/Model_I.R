@@ -10,7 +10,7 @@ total.sample <- 50000
 thin <- 100
 
 # Load data
-df <- readRDS("../1_Data/head_tail_data.rds") 
+df <- readRDS("1_Data/head_tail_data.rds") 
 
 # Run model
 post <- run.jags(
@@ -39,26 +39,26 @@ post <- run.jags(
       for(b in 1:n.blocks) {
         block.mean[b, t] ~ dunif(length.range[1, t], length.range[2, t])
       }
-      additive.mean[t] ~ dnorm(0, 1e-5)
+      sire.mean[t] ~ dnorm(0, 1e-5)
       dam.mean[t] ~ dnorm(0, 1e-5)
       interaction.mean[t] ~ dnorm(0, 1e-5)
       
       # ---- prior for variances ----
-      additive.vcov[t, t] ~ dunif(0, 1e3)
-      maternal.vcov[t, t] ~ dunif(0, 1e3)
+      sire.vcov[t, t] ~ dunif(0, 1e3)
+      dam.vcov[t, t] ~ dunif(0, 1e3)
       interaction.vcov[t, t] ~ dunif(0, 1e3)
       resid.vcov[t, t] ~ dunif(0, 1e3)
     }
   
-    # ---- prior for additive covariance ----
-    additive.corr ~ dunif(-1, 1)
-    additive.vcov[1, 2] <- additive.corr * sqrt(additive.vcov[1, 1] * additive.vcov[2, 2])
-    additive.vcov[2, 1] <- additive.vcov[1, 2]
+    # ---- prior for sire covariance ----
+    sire.corr ~ dunif(-1, 1)
+    sire.vcov[1, 2] <- sire.corr * sqrt(sire.vcov[1, 1] * sire.vcov[2, 2])
+    sire.vcov[2, 1] <- sire.vcov[1, 2]
     
-    # ---- prior maternal covariance ----
-    maternal.corr ~ dunif(-1, 1)
-    maternal.vcov[1, 2] <- maternal.corr * sqrt(maternal.vcov[1, 1] * maternal.vcov[2, 2])
-    maternal.vcov[2, 1] <- maternal.vcov[1, 2]
+    # ---- prior for dam covariance ----
+    dam.corr ~ dunif(-1, 1)
+    dam.vcov[1, 2] <- dam.corr * sqrt(dam.vcov[1, 1] * dam.vcov[2, 2])
+    dam.vcov[2, 1] <- dam.vcov[1, 2]
     
     # ---- prior for interaction covariance ----
     interaction.corr ~ dunif(-1, 1)
@@ -70,14 +70,14 @@ post <- run.jags(
     resid.vcov[1, 2] <- resid.corr * sqrt(resid.vcov[1, 1] * resid.vcov[2, 2])
     resid.vcov[2, 1] <- resid.vcov[1, 2]
     
-    # ---- prior for additive sire effect (for each sire) ----
+    # ---- prior for sire effect (for each sire) ----
     for(s in 1:n.sires) {
-      additive.eff[s, 1:2] ~ dmnorm.vcov(additive.mean, additive.vcov)
+      sire.eff[s, 1:2] ~ dmnorm.vcov(sire.mean, sire.vcov)
     }
     
-    # ---- priors for additive dam & maternal effect (for each dam) ----
+    # ---- priors for dam effect (for each dam) ----
     for(d in 1:n.dams) {
-      maternal.eff[d, 1:2] ~ dmnorm.vcov(dam.mean - additive.mean, maternal.vcov)
+      dam.eff[d, 1:2] ~ dmnorm.vcov(dam.mean, dam.vcov)
     }
     
     # ---- prior for interaction effect (for each sire x dam interaction) ----
@@ -93,8 +93,8 @@ post <- run.jags(
         
         # expected mean for the l-th larvae and t-th trait
         mu[l, t] <- block.mean[block[l], t] + 
-          (2 * additive.eff[sire[l], t]) + 
-          maternal.eff[dam[l], t] +
+          sire.eff[sire[l], t] + 
+          dam.eff[dam[l], t] +
           interaction.eff[interaction[l], t]
       }
       # likelihood of l-th larvae for both traits from multivariate normal
@@ -102,7 +102,7 @@ post <- run.jags(
     }
   }",
   monitor = c(
-    "deviance", "additive.vcov", "maternal.vcov", "interaction.vcov", 
+    "deviance", "sire.vcov", "dam.vcov", "interaction.vcov", 
     "resid.vcov", "mean.overall"
   ), 
   inits = function() list(
@@ -123,17 +123,17 @@ elapsed <- swfscMisc::autoUnits(post$timetaken)
 # Extract posterior to list of arrays - p
 p <- swfscMisc::runjags2list(post)
 rownames(p$mean.overall) <- c("head", "tail")
-dimnames(p$additive.vcov)[1:2] <- 
-  dimnames(p$maternal.vcov)[1:2] <- 
+dimnames(p$sire.vcov)[1:2] <- 
+  dimnames(p$dam.vcov)[1:2] <- 
   dimnames(p$interaction.vcov)[1:2] <- 
   dimnames(p$resid.vcov)[1:2] <- 
   list(rownames(p$mean.overall), rownames(p$mean.overall))
 
 # Add QG metrics to list
-p$VA <- 4 * p$additive.vcov
-p$VM <- p$maternal.vcov
+p$VA <- 4 * p$sire.vcov
+p$VM <- p$dam.vcov - p$sire.vcov
 p$VD <- 4 * p$interaction.vcov
-p$VP <- 2 * p$additive.vcov + p$VM + p$interaction.vcov + p$resid.vcov
+p$VP <- p$VA + p$VM + p$VD + p$resid.vcov
 p$H <- p$VA / p$VP
 p$E <- rbind(
   head = p$VA[1, 1, ] / (p$mean.overall[1, ] ^ 2),
@@ -161,11 +161,11 @@ e.params_BetaMCMC <- evolvability::evolvabilityBetaMCMC(
 )
 
 # Save all objects and plot posterior summaries
-save.image(format(end, "../3_Model_outputs/Model_I_posterior_%Y%m%d_%H%M.rdata"))
+save.image(format(end, "3_Model_outputs/Model_I_posterior_%Y%m%d_%H%M.rdata"))
 
 plot(
   post, 
-  file = format(end, "../3_Model_outputs/Model_I_plots_%Y%m%d_%H%M.pdf")
+  file = format(end, "3_Model_outputs/Model_I_plots_%Y%m%d_%H%M.pdf")
 )
 
 print(elapsed)

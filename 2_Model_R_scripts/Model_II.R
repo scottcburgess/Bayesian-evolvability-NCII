@@ -10,7 +10,7 @@ total.sample <- 10000
 thin <- 100
 
 # Load data
-df <- readRDS("../1_Data/head_tail_data.rds")
+df <- readRDS("1_Data/head_tail_data.rds")
 df$log.ratio <- log(df$head / df$tail)
 
 # Run model
@@ -44,24 +44,24 @@ post <- run.jags(
       mean.log.ratio.block[b] ~ dunif(log.ratio.range[1], log.ratio.range[2])
       var.log.ratio.block[b] ~ dunif(0, 1e3)
     }
-    additive.mean ~ dnorm(0, 1e-3)
+    sire.mean ~ dnorm(0, 1e-3)
     dam.mean ~ dnorm(0, 1e-3)
     interaction.mean ~ dnorm(0, 1e-3)
       
     # ---- variance priors ----
-    additive.var ~ dunif(0, 1e2)
-    maternal.var ~ dunif(0, 1e2)
+    sire.var ~ dunif(0, 1e2)
+    dam.var ~ dunif(0, 1e2)
     interaction.var ~ dunif(0, 1e2)
     resid.var ~ dunif(0, 1e2)
   
     # ---- sire priors ----
     for(s in 1:n.sires) {
-      additive.eff[s] ~ dnorm(additive.mean, 1 / additive.var)
+      sire.eff[s] ~ dnorm(sire.mean, 1 / sire.var)
     }
     
     # ---- dam priors ----
     for(d in 1:n.dams) {
-      maternal.eff[d, 1:2] ~ dmnorm.vcov(dam.mean - additive.mean, maternal.vcov)
+      dam.eff[d, 1:2] ~ dmnorm.vcov(dam.mean, 1 / dam.var)
     }
     
     # ---- interaction priors ----
@@ -75,14 +75,14 @@ post <- run.jags(
       log.ratio2[l] ~ dnorm(mean.log.ratio.block[block[l]], 1 / var.log.ratio.block[block[l]]) 
       
       mu[l] <- block.mean[block[l]] + 
-        (2 * additive.eff[sire[l], t]) + 
-        maternal.eff[dam[l], t] +
+        sire.eff[sire[l], t] + 
+        dam.eff[dam[l], t] +
         interaction.eff[interaction[l], t]
       log.ratio3[l] ~ dnorm(mu[l], 1 / resid.var)
     }
   }",
   monitor = c(
-    "deviance", "additive.var", "maternal.var", "interaction.var", "resid.var",
+    "deviance", "sire.var", "dam.var", "interaction.var", "resid.var",
     "mean.overall", "mean.log.ratio.block"
   ), 
   inits = function() list(
@@ -104,10 +104,10 @@ elapsed <- swfscMisc::autoUnits(post$timetaken)
 p <- swfscMisc::runjags2list(post)
 
 # Add QG metrics to list
-p$VA <- 4 * p$additive.var
-p$VM <- p$maternal.var
+p$VA <- 4 * p$sire.var
+p$VM <- p$dam.var - p$sire.var
 p$VD <- 4 * p$interaction.var
-p$VP <- 2 * p$additive.var + p$VM + p$interaction.var + p$resid.var
+p$VP <- p$VA + p$VM + p$VD + p$resid.var
 
 # Compute heritability and evolvability based on deVillemereuil et al 2016
 convertVarScale <- function(metric, p) {
@@ -134,8 +134,8 @@ p$E <- var.obs$VA |>
   mutate(E = var.a.obs / (p$mean.overall ^ 2)) |> 
   pull('E')
 
-save.image(format(end, "../3_Model_outputs/Model_II_posterior_%Y%m%d_%H%M.rdata"))
+save.image(format(end, "3_Model_outputs/Model_II_posterior_%Y%m%d_%H%M.rdata"))
 
-plot(post, file = format(end, "../3_Model_outputs/Model_II_plots_%Y%m%d_%H%M.pdf"))
+plot(post, file = format(end, "3_Model_outputs/Model_II_plots_%Y%m%d_%H%M.pdf"))
 
 print(elapsed)
