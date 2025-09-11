@@ -7,4 +7,5 @@
 .quarto
 *.rdata
 *.html
+*.pdf
 old/
