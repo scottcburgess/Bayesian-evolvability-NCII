@@ -100,7 +100,7 @@ post <- run.jags(
       outcome2[l] ~ dbern(pr.block[block[l], metric[l]])
       
       logit(pr[l]) <- block.mean[block[l], metric[l]] + 
-         sire.eff[sire[l], metric[l]]) + 
+         sire.eff[sire[l], metric[l]] + 
          dam.eff[dam[l], metric[l]] + 
          interaction.eff[interaction[l], metric[l]] 
       outcome3[l] ~ dbern(pr[l])
