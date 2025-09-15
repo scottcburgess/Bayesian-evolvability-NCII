@@ -5,9 +5,9 @@ library(runjags)
 # MCMC parameters
 chains <- 10
 adapt <- 100
-burnin <- 50000
-total.sample <- 50000 
-thin <- 100
+burnin <- 100 #50000
+total.sample <- 1000 #50000 
+thin <- 1 #100
 
 # Load data
 df <- readRDS("1_Data/head_tail_data.rds") 
@@ -26,7 +26,8 @@ post <- run.jags(
     interaction = as.numeric(factor(df$interaction)),
     length.range = cbind(round(range(df$head)), round(range(df$tail))),
     length1 = cbind(df$head, df$tail),
-    length2 = cbind(df$head, df$tail)
+    length2 = cbind(df$head, df$tail),
+    length3 = cbind(df$head, df$tail)
   ),
   model = "model {
     # for each t-trait...
@@ -37,6 +38,8 @@ post <- run.jags(
       
       # ---- prior for block and effect means ----
       for(b in 1:n.blocks) {
+        overall.block.mean[b, t] ~ dunif(length.range[1, t], length.range[2, t])
+        var.overall.block.mean[b, t] ~ dunif(0, 1e5)
         block.mean[b, t] ~ dunif(length.range[1, t], length.range[2, t])
       }
       sire.mean[t] ~ dnorm(0, 1e-5)
@@ -90,6 +93,7 @@ post <- run.jags(
       for(t in 1:2) {
         # likelihood of overall mean for computing evolvability
         length1[l, t] ~ dnorm(mean.overall[t], 1 / var.overall[t])
+        length2[l, t] ~ dnorm(overall.block.mean[block[l], t], 1 / var.overall.block.mean[block[l], t])
         
         # expected mean for the l-th larvae and t-th trait
         mu[l, t] <- block.mean[block[l], t] + 
@@ -98,12 +102,12 @@ post <- run.jags(
           interaction.eff[interaction[l], t]
       }
       # likelihood of l-th larvae for both traits from multivariate normal
-      length2[l, ] ~ dmnorm.vcov(mu[l, ], resid.vcov)
+      length3[l, ] ~ dmnorm.vcov(mu[l, ], resid.vcov)
     }
   }",
   monitor = c(
     "deviance", "sire.vcov", "dam.vcov", "interaction.vcov", 
-    "resid.vcov", "mean.overall"
+    "resid.vcov", "mean.overall", 'overall.block.mean'
   ), 
   inits = function() list(
     .RNG.name = "lecuyer::RngStream",
@@ -122,7 +126,8 @@ elapsed <- swfscMisc::autoUnits(post$timetaken)
 
 # Extract posterior to list of arrays - p
 p <- swfscMisc::runjags2list(post)
-rownames(p$mean.overall) <- c("head", "tail")
+rownames(p$mean.overall) <- 
+  dimnames(p$overall.block.mean)[[2]] <- c("head", "tail")
 dimnames(p$sire.vcov)[1:2] <- 
   dimnames(p$dam.vcov)[1:2] <- 
   dimnames(p$interaction.vcov)[1:2] <- 
