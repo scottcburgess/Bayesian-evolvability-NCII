@@ -127,7 +127,7 @@ elapsed <- swfscMisc::autoUnits(post$timetaken)
 # Extract posterior to list of arrays - p
 p <- swfscMisc::runjags2list(post)
 rownames(p$mean.overall) <- 
-  dimnames(p$overall.block.mean)[[2]] <- c("head", "tail")
+  dimnames(p$overall.block.mean)[[2]] <- c("Trunk", "Tail")
 dimnames(p$sire.vcov)[1:2] <- 
   dimnames(p$dam.vcov)[1:2] <- 
   dimnames(p$interaction.vcov)[1:2] <- 
