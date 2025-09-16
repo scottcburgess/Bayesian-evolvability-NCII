@@ -5,9 +5,9 @@ library(runjags)
 # MCMC parameters
 chains <- 10
 adapt <- 100
-burnin <- 100 #50000
-total.sample <- 1000 #50000 
-thin <- 1 #100
+burnin <- 50000
+total.sample <- 50000 
+thin <- 100
 
 # Load data
 df <- readRDS("1_Data/head_tail_data.rds") 
@@ -39,7 +39,7 @@ post <- run.jags(
       # ---- prior for block and effect means ----
       for(b in 1:n.blocks) {
         overall.block.mean[b, t] ~ dunif(length.range[1, t], length.range[2, t])
-        var.overall.block.mean[b, t] ~ dunif(0, 1e5)
+        overall.block.var[b, t] ~ dunif(0, 1e5)
         block.mean[b, t] ~ dunif(length.range[1, t], length.range[2, t])
       }
       sire.mean[t] ~ dnorm(0, 1e-5)
@@ -93,7 +93,7 @@ post <- run.jags(
       for(t in 1:2) {
         # likelihood of overall mean for computing evolvability
         length1[l, t] ~ dnorm(mean.overall[t], 1 / var.overall[t])
-        length2[l, t] ~ dnorm(overall.block.mean[block[l], t], 1 / var.overall.block.mean[block[l], t])
+        length2[l, t] ~ dnorm(overall.block.mean[block[l], t], 1 / overall.block.var[block[l], t])
         
         # expected mean for the l-th larvae and t-th trait
         mu[l, t] <- block.mean[block[l], t] + 

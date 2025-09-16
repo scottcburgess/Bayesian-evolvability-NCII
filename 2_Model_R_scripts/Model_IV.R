@@ -1,260 +1,242 @@
 rm(list = ls())
 library(tidyverse)
 library(runjags)
-library(parallel)
-source("2_Model_R_scripts/0_misc_funcs.R")
 
-chains <- 14
+# MCMC parameters
+chains <- 10
 adapt <- 100
-burnin <- 500000
-total.sample <- 1400
+burnin <- 50000
+total.sample <- 50000 
 thin <- 100
 
-df <- readRDS("1_Data/hatch_settle_data.rds") 
+# Load data
+head_tail.df <- readRDS('../1_Data/head_tail_data.rds') 
+hatch_settle.df <- readRDS('../1_Data/hatch_settle_data.rds') 
 
-blocks.to.keep <- table(block = df$block, metric = df$metric) |> 
+# Filter for blocks that occur in both
+blocks.to.keep <- table(
+  block = hatch_settle.df$block,
+  metric = hatch_settle.df$metric
+) |> 
   as.data.frame() |> 
-  filter(Freq > 0) |> 
-  group_by(block) |> 
-  summarize(n = n(), .groups = "drop") |> 
-  filter(n == 2) |> 
+  filter(Freq > 0 & metric == 'settling') |>
   pull(block) |> 
   as.character() |> 
   as.integer()
 
-settle.df <- df |> 
-  filter(block %in% blocks.to.keep & metric == "settling") |> 
-  select(-metric)
+hatch_settle.df <- filter(hatch_settle.df, block %in% blocks.to.keep) 
+interactions <- intersect(head_tail.df$interaction, hatch_settle.df$interaction)
+head_tail.df <- filter(head_tail.df, interaction %in% interactions)
+hatch_settle.df <- filter(hatch_settle.df, interaction %in% interactions)
 
-length.df <- readRDS("1_Data/head_tail_data.rds") 
-
-interactions <- intersect(settle.df$interaction, length.df$interaction)
-
-settle.df <- filter(settle.df, interaction %in% interactions)
-length.df <- filter(length.df, interaction %in% interactions)
-
-int.df <- length.df |> 
-  group_by(interaction) |> 
+# Summarize settling rate across blocks
+block.settle <- hatch_settle.df |> 
+  group_by(block) |> 
   summarize(
-    block = unique(block),
-    sire = unique(sire),
-    dam = unique(dam),
-    .groups = "drop"
+    n = n(),
+    n.settle = sum(outcome), 
+    pr.settle = n.settle / n,
+    .groups = 'drop'
   ) |> 
   mutate(
-    block.num = as.numeric(factor(block)),
-    sire.num = as.numeric(factor(sire)),
-    dam.num = as.numeric(factor(dam)),
-    interaction.num = as.numeric(factor(interaction))
-  ) |> 
-  select(-block, -sire, -dam)
+    a = n.settle + 1,
+    b = n - n.settle + 1,
+    lower = qbeta(0.0001, a, b),
+    upper = qbeta(0.9999, a, b)
+  )
 
-settle.df <- left_join(settle.df, int.df, by = "interaction")
-length.df <- left_join(length.df, int.df, by = "interaction")
 
-model.data <- list(
-  beta.var = 1,
-  max.var = 10, 
-  n.blocks = max(int.df$block.num),
-  n.sires = max(int.df$sire.num),
-  n.dams = max(int.df$dam.num),
-  n.interactions = nrow(int.df),
-  block = int.df$block.num,
-  sire = int.df$sire.num,
-  dam = int.df$dam.num,
-  n.length = nrow(length.df),
-  length.range = cbind(range(length.df$head), range(length.df$tail)),
-  length = as.matrix(length.df[, c("head", "tail")]),
-  length.interaction = length.df$interaction.num,
-  n.settle = nrow(settle.df),
-  settle = cbind(settle.df$outcome, settle.df$outcome),
-  settle.interaction = settle.df$interaction.num
-)
-
+# Run model
 post <- run.jags(
-  data = model.data,
-  model = "model {
-    for(t in 1:2) {
-      # ---- variance ----
-      additive.var[t] ~ dunif(0, max.var)
-      maternal.var[t] ~ dunif(0, max.var)
-      block.var[t] ~ dunif(0, max.var)
+  data = list(
+    n.blocks = length(unique(head_tail.df$block)),
+    n.sires = length(unique(head_tail.df$sire)),
+    n.dams = length(unique(head_tail.df$dam)),
+    n.interactions = length(unique(head_tail.df$interaction)),
+    n.larvae = nrow(head_tail.df),
+    block = as.numeric(factor(head_tail.df$block)),
+    sire = as.numeric(factor(head_tail.df$sire)),
+    dam = as.numeric(factor(head_tail.df$dam)),
+    interaction = as.numeric(factor(head_tail.df$interaction)),
+    block.mean.range = cbind(
+      round(range(head_tail.df$head)), 
+      round(range(head_tail.df$tail)),
+      qlogis(c(0.4, 0.95))
+    ),
+    length1 = cbind(head_tail.df$head, head_tail.df$tail),
+    length2 = cbind(head_tail.df$head, head_tail.df$tail),
+    length3 = cbind(head_tail.df$head, head_tail.df$tail),
+    n.settle = nrow(hatch_settle.df),
+    settle.block = as.numeric(factor(hatch_settle.df$block)),
+    settle.sire = as.numeric(factor(hatch_settle.df$sire)),
+    settle.dam = as.numeric(factor(hatch_settle.df$dam)),
+    settle.interaction = as.numeric(factor(hatch_settle.df$interaction)),
+    settle1 = hatch_settle.df$outcome,    
+    settle2 = hatch_settle.df$outcome, 
+    settle3 = hatch_settle.df$outcome,
+    i = c(1, 1, 2),
+    j = c(2, 3, 3)
+  ),
+  model = 'model {
+    # for each t-trait...
+    for(t in 1:3) {  
+      # ---- prior for overall mean and variance ----
+      mean.overall[t] ~ dunif(block.mean.range[1, t], block.mean.range[2, t])
+      var.overall[t] ~ dunif(0, 1e5)
       
-      # ---- effects ----
-      for(s in 1:n.sires) {
-        additive.sire.eff[s, t] ~ dnorm(0, 1 / additive.var[t])
-      }
-  
-      for(d in 1:n.dams) {
-        additive.dam.eff[d, t] ~ dnorm(0, 1 / additive.var[t])
-        maternal.eff[d, t] ~ dnorm(0, 1 / maternal.var[t])
-      }
-    
+      # ---- priors for block and effect means ----
       for(b in 1:n.blocks) {
-        block.eff[b, t] ~ dnorm(0, 1 / block.var[t])
+        overall.block.mean[b, t] ~ dunif(block.mean.range[1, t], block.mean.range[2, t])
+        overall.block.var[b, t] ~ dunif(0, 1e5)
+        block.mean[b, t] ~ dunif(block.mean.range[1, t], block.mean.range[2, t])
       }
-
-      # ---- logistic linear equation priors ----
-      intercept[t] ~ dnorm(0, 1 / 100)
-      int.beta[t] ~ dnorm(0, 1 / beta.var)
-      sire.beta[t] ~ dnorm(0, 1 / beta.var)
-      maternal.beta[t] ~ dnorm(0, 1 / beta.var)
-      block.beta[t] ~ dnorm(0, 1 / beta.var)
-  
-      for(i in 1:n.interactions) {  
-        interaction.mean[i, t] ~ dunif(length.range[1, t], length.range[2, t])
-        interaction.var[i, t] ~ dunif(0, max.var)
+      sire.mean[t] ~ dnorm(0, 1e-5)
+      dam.mean[t] ~ dnorm(0, 1e-5)
+      interaction.mean[t] ~ dnorm(0, 1e-5)
       
-        # expected mean length in interaction
-        mean.length[i, t] <- interaction.mean[i, t] + 
-          additive.sire.eff[sire[i], t] + 
-          additive.dam.eff[dam[i], t] +
-          maternal.eff[dam[i], t] +
-          block.eff[block[i], t]
-      
-        # linear equation for expected probability of settling
-        logit(pr.settle[i, t]) <- intercept[t] + 
-          (int.beta[t] * interaction.mean[i, t]) +
-          (sire.beta[t] * additive.sire.eff[sire[i], t]) +
-          (maternal.beta[t] * maternal.eff[dam[i], t]) +
-          (block.beta[t] * block.eff[block[i], t])
-      }
-      
-      # likelihood of head or tail length
-      for(l in 1:n.length) {
-        length[l, t] ~ dnorm(
-          mean.length[length.interaction[l], t], 
-          1 / interaction.var[length.interaction[l], t]
-        )
-      }
-    
-      # likelihood of settling
-      for(l in 1:n.settle) {
-        settle[l, t] ~ dbern(pr.settle[settle.interaction[l], t])
-      }
+      # ---- prior for variances ----
+      sire.vcov[t, t] ~ dunif(0, 1e3)
+      dam.vcov[t, t] ~ dunif(0, 1e3)
+      interaction.vcov[t, t] ~ dunif(0, 1e3)
+      resid.vcov[t, t] ~ dunif(0, 1e3)
     }
-  }",
+    
+    # ---- correlation priors for covariances ----
+    sire.corr ~ dunif(-1, 1)
+    dam.corr ~ dunif(-1, 1)
+    interaction.corr ~ dunif(-1, 1)
+    resid.corr ~ dunif(-1, 1)
+    
+    
+    # ---- construct variance/covariance matrices ----
+    for(k in 1:3) {
+      sire.vcov[i[k], j[k]] <- sire.corr * sqrt(sire.vcov[i[k], i[k]] * sire.vcov[j[k], j[k]])
+      sire.vcov[j[k], i[k]] <- sire.vcov[i[k], j[k]]
+      dam.vcov[i[k], j[k]]  <- dam.corr * sqrt(dam.vcov[i[k], i[k]] * dam.vcov[j[k], j[k]])
+      dam.vcov[j[k], i[k]] <- dam.vcov[i[k], j[k]]
+      interaction.vcov[i[k], j[k]] <- interaction.corr * sqrt(interaction.vcov[i[k], i[k]] * interaction.vcov[j[k], j[k]])
+      interaction.vcov[j[k], i[k]] <- interaction.vcov[i[k], j[k]]
+      resid.vcov[i[k], j[k]] <- resid.corr * sqrt(resid.vcov[i[k], i[k]] * resid.vcov[j[k], j[k]])
+      resid.vcov[j[k], i[k]] <- resid.vcov[i[k], j[k]]
+    }
+    
+    # ---- prior for additive sire effect (for each sire) ----
+    for(s in 1:n.sires) {
+      sire.eff[s, 1:3] ~ dmnorm.vcov(sire.mean, sire.vcov)
+    }
+    
+    # ---- prior for maternal effect (for each dam) ----
+    for(d in 1:n.dams) {
+      dam.eff[d, 1:3] ~ dmnorm.vcov(dam.mean, dam.vcov)
+    }
+    
+    # ---- prior for interaction effect (for each sire x dam interaction) ----
+    for(int in 1:n.interactions) {
+      interaction.eff[int, 1:3] ~ dmnorm.vcov(interaction.mean, interaction.vcov)
+    }
+    
+    
+    # ---- head/tail likelihood ----
+    for(l in 1:n.larvae) {
+      for(t in 1:2) {        
+        # likelihood of overall mean for computing evolvability
+        length1[l, t] ~ dnorm(mean.overall[t], 1 / var.overall[t])
+        length2[l, t] ~ dnorm(overall.block.mean[block[l], t], 1 / overall.block.var[block[l], t])
+        
+        # expected mean for the l-th larvae and t-th trait
+        length.mu[l, t] <- block.mean[block[l], t] + 
+          sire.eff[sire[l], t] + 
+          dam.eff[dam[l], t] +
+          interaction.eff[interaction[l], t]
+      }
+      # likelihood of l-th larvae for both traits from multivariate normal
+      length3[l, ] ~ dmnorm.vcov(length.mu[l, ], resid.vcov[1:2, 1:2])
+    }
+    
+    
+    # ---- likelihood of settling ----
+    for(s in 1:n.settle) {
+      # settling block mean is on logit scale, so must take inverse-logit for bernoulli likelihood
+      settle1[s] ~ dbern(ilogit(mean.overall[3]))
+      settle2[s] ~ dbern(ilogit(overall.block.mean[settle.block[s], 3]))
+      
+      logit(pr.settle[s]) <- block.mean[settle.block[s], 3] +
+        sire.eff[settle.sire[s], 3] +
+        dam.eff[settle.dam[s], 3] +
+        interaction.eff[settle.interaction[s], 3]
+      settle3[s] ~ dbern(pr.settle[s])
+    }
+  }',
   monitor = c(
-    "deviance", "intercept", "pr.settle",
-    "int.beta", "sire.beta", "maternal.beta", "block.beta",
-    "interaction.mean", "additive.sire.eff", "maternal.eff", "block.eff"
+    'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 
+    'resid.vcov', 'block.mean', 'sire.eff', 'dam.eff', 
+    'interaction.eff', 'mean.overall', 'overall.block.mean'
   ), 
   inits = function() list(
-    .RNG.name = "lecuyer::RngStream",
+    .RNG.name = 'lecuyer::RngStream',
     .RNG.seed = sample(1:9999, 1)
   ),
-  modules = c("glm", "lecuyer"),
+  modules = c('glm', 'lecuyer'),
   n.chains = chains,
   adapt = adapt,
   burnin = burnin,
   sample = ceiling(total.sample / chains),
   thin = thin,
-  method = "parallel"
+  method = 'parallel',
+  summarise = FALSE
 )
 end <- Sys.time()
 elapsed <- swfscMisc::autoUnits(post$timetaken)
 
+
+# Extract posterior to list of arrays - p
 p <- swfscMisc::runjags2list(post)
-dimnames(p$intercept)[[1]] <- 
-  dimnames(p$int.beta)[[1]] <-
-  dimnames(p$sire.beta)[[1]] <-
-  dimnames(p$maternal.beta)[[1]] <-
-  dimnames(p$block.beta)[[1]] <-
-  dimnames(p$pr.settle)[[2]] <-
-  dimnames(p$interaction.mean)[[2]] <-
-  dimnames(p$additive.sire.eff)[[2]] <-
-  dimnames(p$maternal.eff)[[2]] <-
-  dimnames(p$block.eff)[[2]] <-
-  c("head", "tail")
+dimnames(p$block.mean)[[2]] <- 
+  dimnames(p$sire.eff)[[2]] <- 
+  dimnames(p$dam.eff)[[2]] <- 
+  dimnames(p$interaction.eff)[[2]] <- 
+  dimnames(p$mean.overall)[[1]] <- 
+  dimnames(p$overall.block.mean)[[2]] <- c('head', 'tail', 'settle')
+dimnames(p$sire.vcov)[1:2] <-
+  dimnames(p$dam.vcov)[1:2] <-
+  dimnames(p$interaction.vcov)[1:2] <-
+  dimnames(p$resid.vcov)[1:2] <- 
+  list(dimnames(p$sire.eff)[[2]], dimnames(p$sire.eff)[[2]])
 
-mean.x.vec <- function(mat, n = 100) {
-  apply(mat, 2, function(x) seq(min(x), max(x), length.out = n))
-}
+# Hardcode settling resid.vcov off-diag to 0 and diag to 1
+p$resid.vcov['settle', , ] <- p$resid.vcov[, 'settle', ] <- 0
+p$resid.vcov['settle', 'settle', ] <- 1
 
-int.mean.x <- mean.x.vec(p$interaction.mean)
-sire.eff.x <- mean.x.vec(p$additive.sire.eff)
-maternal.eff.x <- mean.x.vec(p$maternal.eff)
-block.eff.x <- mean.x.vec(p$block.eff)
+# Add QG metrics to list
+p$VA <- 4 * p$sire.vcov
+p$VM <- p$dam.vcov - p$sire.vcov
+p$VD <- 4 * p$interaction.vcov
+p$VP <- p$VA + p$VM + p$VD + p$resid.vcov
+p$H <- p$VA / p$VP
 
-pred.pr.settle <- lapply(colnames(sire.eff.x), function(m) {
-  int <- mclapply(int.mean.x[, m], function(x) {
-    sapply(1:model.data$n.interactions, function(i) {
-      p$intercept[m, ] + 
-        (p$int.beta[m, ] * x) +
-        (p$sire.beta[m, ] * t(p$additive.sire.eff[model.data$sire[i], m, ])) +
-        (p$maternal.beta[m, ] * t(p$maternal.eff[model.data$dam[i], m, ])) +
-        (p$block.beta[m, ] * t(p$block.eff[model.data$block[i], m, ]))
-    }) |> 
-      as.vector() |> 
-      vecSmry() |> 
-      plogis() |> 
-      c(effect = x)
-  }, mc.cores = 14) |> 
-    do.call(rbind, .) |> 
-    as.data.frame() |> 
-    mutate(metric = m, effect.type = "Interaction Mean")
-  
-  sire <- mclapply(sire.eff.x[, m], function(x) {
-    sapply(1:model.data$n.interactions, function(i) {
-      p$intercept[m, ] + 
-        (p$int.beta[m, ] * t(p$interaction.mean[i, m, ])) +
-        (p$sire.beta[m, ] * x) +
-        (p$maternal.beta[m, ] * t(p$maternal.eff[model.data$dam[i], m, ])) +
-        (p$block.beta[m, ] * t(p$block.eff[model.data$block[i], m, ]))
-    }) |> 
-      as.vector() |> 
-      vecSmry() |> 
-      plogis() |> 
-      c(effect = x)
-  }, mc.cores = 14) |> 
-    do.call(rbind, .) |> 
-    as.data.frame() |> 
-    mutate(metric = m, effect.type = "Additive Sire")
-  
-  maternal <- mclapply(maternal.eff.x[, m], function(x) {
-    sapply(1:model.data$n.interactions, function(i) {
-      p$intercept[m, ] + 
-        (p$int.beta[m, ] * t(p$interaction.mean[i, m, ])) +
-        (p$sire.beta[m, ] * t(p$additive.sire.eff[model.data$sire[i], m, ])) +
-        p$maternal.beta[m, ] * x +
-        (p$block.beta[m, ] * t(p$block.eff[model.data$block[i], m, ]))
-    }) |> 
-      as.vector() |> 
-      vecSmry() |> 
-      plogis() |> 
-      c(effect = x)
-  }, mc.cores = 14) |> 
-    do.call(rbind, .) |> 
-    as.data.frame() |> 
-    mutate(metric = m, effect.type = "Maternal")
-  
-  block <- mclapply(block.eff.x[, m], function(x) {
-    sapply(1:model.data$n.interactions, function(i) {
-      p$intercept[m, ] + 
-        (p$int.beta[m, ] * t(p$interaction.mean[i, m, ])) +
-        (p$sire.beta[m, ] * t(p$additive.sire.eff[model.data$sire[i], m, ])) +
-        (p$maternal.beta[m, ] * t(p$maternal.eff[model.data$dam[i], m, ])) +
-        (p$block.beta[m, ] * x)
-    }) |> 
-      as.vector() |> 
-      vecSmry() |> 
-      plogis() |> 
-      c(effect = x)
-  }, mc.cores = 14) |> 
-    do.call(rbind, .) |> 
-    as.data.frame() |> 
-    mutate(metric = m, effect.type = "Block")
-  
-  bind_rows(int, sire, maternal, block)
-}) |> 
-  bind_rows()
 
-save.image(format(end, "3_Model_outputs/Model_IV_posterior_%Y%m%d_%H%M.rdata"))
+# Compute heritability and evolvability based on deVillemereuil et al 2016
+qgparams.post <- sapply(dimnames(p$overall.block.mean)[[2]], function(m) {
+  parallel::mclapply(1:dim(p$VA)[3], function(i) {
+    QGglmm::QGparams(
+      var.a = p$VA[m, m, i],
+      var.p = p$VP[m, m, i],
+      predict = p$overall.block.mean[, m, i],
+      model = if(m == 'settle') 'binom1.logit' else 'Gaussian',
+      verbose = FALSE
+    )
+  }, mc.cores = 14) |>
+    bind_rows() |>
+    mutate(E = var.a.obs / (p$mean.overall[m, ] ^ 2))
+}, simplify = FALSE)
+
+
+# Save all objects and plot posterior summaries
+save.image(format(end, '../3_Model_outputs/Model_I_posterior_%Y%m%d_%H%M.rdata'))
 
 plot(
-  post, 
-  vars = c("deviance", "intercept", "int.beta", "sire.beta", "maternal.beta", "block.beta"),
-  file = format(end, "3_Model_outputs/Model_IV_plots_%Y%m%d_%H%M.pdf")
+  post,
+  file = format(end, '../3_Model_outputs/Model_I_plots_%Y%m%d_%H%M.pdf')
 )
 
 print(elapsed)
