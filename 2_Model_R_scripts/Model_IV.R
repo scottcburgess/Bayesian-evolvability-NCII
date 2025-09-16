@@ -10,7 +10,7 @@ total.sample <- 50000
 thin <- 100
 
 # Load data
-head_tail.df <- readRDS('../1_Data/head_tail_data.rds') 
+trunk_tail.df <- readRDS('../1_Data/head_tail_data.rds') 
 hatch_settle.df <- readRDS('../1_Data/hatch_settle_data.rds') 
 
 # Filter for blocks that occur in both
@@ -25,8 +25,8 @@ blocks.to.keep <- table(
   as.integer()
 
 hatch_settle.df <- filter(hatch_settle.df, block %in% blocks.to.keep) 
-interactions <- intersect(head_tail.df$interaction, hatch_settle.df$interaction)
-head_tail.df <- filter(head_tail.df, interaction %in% interactions)
+interactions <- intersect(trunk_tail.df$interaction, hatch_settle.df$interaction)
+trunk_tail.df <- filter(trunk_tail.df, interaction %in% interactions)
 hatch_settle.df <- filter(hatch_settle.df, interaction %in% interactions)
 
 # Summarize settling rate across blocks
@@ -49,23 +49,23 @@ block.settle <- hatch_settle.df |>
 # Run model
 post <- run.jags(
   data = list(
-    n.blocks = length(unique(head_tail.df$block)),
-    n.sires = length(unique(head_tail.df$sire)),
-    n.dams = length(unique(head_tail.df$dam)),
-    n.interactions = length(unique(head_tail.df$interaction)),
-    n.larvae = nrow(head_tail.df),
-    block = as.numeric(factor(head_tail.df$block)),
-    sire = as.numeric(factor(head_tail.df$sire)),
-    dam = as.numeric(factor(head_tail.df$dam)),
-    interaction = as.numeric(factor(head_tail.df$interaction)),
+    n.blocks = length(unique(trunk_tail.df$block)),
+    n.sires = length(unique(trunk_tail.df$sire)),
+    n.dams = length(unique(trunk_tail.df$dam)),
+    n.interactions = length(unique(trunk_tail.df$interaction)),
+    n.larvae = nrow(trunk_tail.df),
+    block = as.numeric(factor(trunk_tail.df$block)),
+    sire = as.numeric(factor(trunk_tail.df$sire)),
+    dam = as.numeric(factor(trunk_tail.df$dam)),
+    interaction = as.numeric(factor(trunk_tail.df$interaction)),
     block.mean.range = cbind(
-      round(range(head_tail.df$head)), 
-      round(range(head_tail.df$tail)),
+      round(range(trunk_tail.df$head)), 
+      round(range(trunk_tail.df$tail)),
       qlogis(c(0.4, 0.95))
     ),
-    length1 = cbind(head_tail.df$head, head_tail.df$tail),
-    length2 = cbind(head_tail.df$head, head_tail.df$tail),
-    length3 = cbind(head_tail.df$head, head_tail.df$tail),
+    length1 = cbind(trunk_tail.df$head, trunk_tail.df$tail),
+    length2 = cbind(trunk_tail.df$head, trunk_tail.df$tail),
+    length3 = cbind(trunk_tail.df$head, trunk_tail.df$tail),
     n.settle = nrow(hatch_settle.df),
     settle.block = as.numeric(factor(hatch_settle.df$block)),
     settle.sire = as.numeric(factor(hatch_settle.df$sire)),
@@ -196,7 +196,7 @@ dimnames(p$block.mean)[[2]] <-
   dimnames(p$dam.eff)[[2]] <- 
   dimnames(p$interaction.eff)[[2]] <- 
   dimnames(p$mean.overall)[[1]] <- 
-  dimnames(p$overall.block.mean)[[2]] <- c('head', 'tail', 'settle')
+  dimnames(p$overall.block.mean)[[2]] <- c('Trunk', 'Tail', 'Settling')
 dimnames(p$sire.vcov)[1:2] <-
   dimnames(p$dam.vcov)[1:2] <-
   dimnames(p$interaction.vcov)[1:2] <-
@@ -204,8 +204,8 @@ dimnames(p$sire.vcov)[1:2] <-
   list(dimnames(p$sire.eff)[[2]], dimnames(p$sire.eff)[[2]])
 
 # Hardcode settling resid.vcov off-diag to 0 and diag to 1
-p$resid.vcov['settle', , ] <- p$resid.vcov[, 'settle', ] <- 0
-p$resid.vcov['settle', 'settle', ] <- 1
+p$resid.vcov['Settling', , ] <- p$resid.vcov[, 'Settling', ] <- 0
+p$resid.vcov['Settling', 'Settling', ] <- 1
 
 # Add QG metrics to list
 p$VA <- 4 * p$sire.vcov
@@ -222,7 +222,7 @@ qgparams.post <- sapply(dimnames(p$overall.block.mean)[[2]], function(m) {
       var.a = p$VA[m, m, i],
       var.p = p$VP[m, m, i],
       predict = p$overall.block.mean[, m, i],
-      model = if(m == 'settle') 'binom1.logit' else 'Gaussian',
+      model = if(m == 'Settling') 'binom1.logit' else 'Gaussian',
       verbose = FALSE
     )
   }, mc.cores = 14) |>
