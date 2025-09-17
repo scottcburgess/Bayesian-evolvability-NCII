@@ -104,11 +104,14 @@ post <- run.jags(
          dam.eff[dam[l], metric[l]] + 
          interaction.eff[interaction[l], metric[l]] 
       outcome3[l] ~ dbern(pr[l])
+      
+      # draw for posterior predictive check
+      outcome.ppc[l] ~ dbern(pr[l])
     }
   }",
   monitor = c(
     "deviance", "sire.vcov", "dam.vcov", "interaction.vcov",
-    "pr.overall", "pr.block"
+    "pr.overall", "pr.block", 'outcome.ppc[l]'
   ), 
   inits = function() list(
     .RNG.name = "lecuyer::RngStream",

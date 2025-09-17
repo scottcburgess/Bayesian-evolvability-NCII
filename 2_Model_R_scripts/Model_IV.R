@@ -151,6 +151,9 @@ post <- run.jags(
       }
       # likelihood of l-th larvae for both traits from multivariate normal
       length3[l, ] ~ dmnorm.vcov(length.mu[l, ], resid.vcov[1:2, 1:2])
+      
+      # draw for posterior predictive check
+      length.ppc[l, 1:2] ~ dmnorm.vcov(length.mu[l, ], resid.vcov[1:2, 1:2])
     }
     
     
@@ -165,12 +168,16 @@ post <- run.jags(
         dam.eff[settle.dam[s], 3] +
         interaction.eff[settle.interaction[s], 3]
       settle3[s] ~ dbern(pr.settle[s])
+      
+      # draw for psoterior predictive check
+      settle.ppc[s] ~ dbern(pr.settle[s])
     }
   }',
   monitor = c(
     'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 
     'resid.vcov', 'block.mean', 'sire.eff', 'dam.eff', 
-    'interaction.eff', 'mean.overall', 'overall.block.mean'
+    'interaction.eff', 'mean.overall', 'overall.block.mean',
+    'length.ppc', 'settle.ppc'
   ), 
   inits = function() list(
     .RNG.name = 'lecuyer::RngStream',

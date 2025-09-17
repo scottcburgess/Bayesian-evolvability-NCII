@@ -103,11 +103,14 @@ post <- run.jags(
       }
       # likelihood of l-th larvae for both traits from multivariate normal
       length3[l, ] ~ dmnorm.vcov(mu[l, ], resid.vcov)
+      
+      # draw for posterior predictive check
+      length.ppc[l, 1:2] ~ dmnorm.vcov(mu[l, ], resid.vcov)
     }
   }",
   monitor = c(
     "deviance", "sire.vcov", "dam.vcov", "interaction.vcov", 
-    "resid.vcov", "mean.overall", 'overall.block.mean'
+    "resid.vcov", "mean.overall", 'overall.block.mean', 'length.ppc'
   ), 
   inits = function() list(
     .RNG.name = "lecuyer::RngStream",
