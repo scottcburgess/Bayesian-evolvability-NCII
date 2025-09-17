@@ -5,8 +5,8 @@ library(runjags)
 # MCMC parameters
 chains <- 10
 adapt <- 100
-burnin <- 1000000
-total.sample <- 10000
+burnin <- 50000
+total.sample <- 50000
 thin <- 100
 
 # Load data
@@ -79,11 +79,14 @@ post <- run.jags(
         dam.eff[dam[l]] +
         interaction.eff[interaction[l]]
       log.ratio3[l] ~ dnorm(mu[l], 1 / resid.var)
+      
+      # draw for posterior predictive check
+      log.ratio.ppc[l] ~ dnorm(mu[l], 1 / resid.var)
     }
   }",
   monitor = c(
     "deviance", "sire.var", "dam.var", "interaction.var", "resid.var",
-    "mean.overall", "mean.log.ratio.block"
+    "mean.overall", "mean.log.ratio.block", 'log.ratio.ppc[l]'
   ), 
   inits = function() list(
     .RNG.name = "lecuyer::RngStream",
