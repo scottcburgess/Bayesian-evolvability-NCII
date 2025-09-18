@@ -5,9 +5,9 @@ library(runjags)
 # MCMC parameters
 chains <- 10
 adapt <- 100
-burnin <- 50000
-total.sample <- 50000 
-thin <- 100
+burnin <- 10000 #50000
+total.sample <- 10000 #50000 
+thin <- 10
 
 # Load data
 df <- readRDS("1_Data/head_tail_data.rds") 
@@ -130,7 +130,8 @@ elapsed <- swfscMisc::autoUnits(post$timetaken)
 # Extract posterior to list of arrays - p
 p <- swfscMisc::runjags2list(post)
 rownames(p$mean.overall) <- 
-  dimnames(p$overall.block.mean)[[2]] <- c("Trunk", "Tail")
+  dimnames(p$overall.block.mean)[[2]] <- 
+  dimnames(p$length.ppc)[[2]] <- c("Trunk", "Tail")
 dimnames(p$sire.vcov)[1:2] <- 
   dimnames(p$dam.vcov)[1:2] <- 
   dimnames(p$interaction.vcov)[1:2] <- 
