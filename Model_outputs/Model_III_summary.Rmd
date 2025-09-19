@@ -1,0 +1,164 @@
+---
+title: Hatching and Settling Variance Components
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  comment = NA,
+  fig.height = 3,
+  fig.width = 8
+)
+options(scipen = 10, digits = 3)
+
+rm(list = ls())
+library(tidyverse)
+library(runjags)
+source("../0_misc_funcs.R")
+load("Model_III_posterior_20250917_1316.rdata")
+```
+
+## Run Summary  
+
+Chains : `r length(post$mcmc)`  
+Burn-in : `r post$burnin`  
+Samples per chain : `r post$sample`  
+Total samples : `r post$sample * length(post$mcmc)`  
+Thinning : `r post$thin`   
+Duration: `r paste(round(elapsed, 1), units(elapsed))`  
+End Time: `r format(end, "%Y-%m-%d %H:%M")`   
+
+## Posterior Diagnostics
+```{r include=FALSE}
+smry <- summary(
+  post, 
+  vars = c("deviance", "sire.vcov", "dam.vcov", "interaction.vcov")
+) 
+```
+```{r}
+smry |> 
+  as.data.frame() |> 
+  pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
+```
+\newpage  
+
+## V~A~ on the observed scale   
+```{r}
+# p$VA is latent scale variance
+comp.smry(vcv.obs$VA$vcv.G.obs)
+plot.metric(vcv.obs$VA$vcv.G.obs)
+```
+
+## V~M~ on the observed scale   
+```{r}
+comp.smry(vcv.obs$VM$vcv.G.obs)
+plot.metric(vcv.obs$VM$vcv.G.obs)
+```
+\newpage  
+
+## V~D~ on the observed scale   
+```{r}
+comp.smry(vcv.obs$VD$vcv.G.obs)
+plot.metric(vcv.obs$VD$vcv.G.obs)
+```
+\newpage  
+
+## V~M~ / V~A~ on the observed scale   
+```{r}
+vm.va <- vcv.obs$VM$vcv.G.obs / vcv.obs$VA$vcv.G.obs
+comp.smry(vm.va, 1)
+plot.metric(vm.va) + scale_x_log10()
+```
+
+## V~D~ / V~A~ on the observed scale   
+```{r}
+vd.va <- vcv.obs$VD$vcv.G.obs / vcv.obs$VA$vcv.G.obs
+comp.smry(vd.va, 1)
+plot.metric(vd.va) + scale_x_log10()
+```
+\newpage  
+
+## Heritability on the observed scale   
+```{r}
+comp.smry(p$H)
+
+p$H |>
+  t() |> 
+  as.data.frame() |>
+  pivot_longer(everything()) |>
+  ggplot(aes(value)) +
+  geom_histogram(bins = 100) +
+  labs(x = "Value", y = "Count") +
+  facet_wrap(~ name, scales = "free")
+```
+\newpage  
+
+## Evolvability (single traits) on the observed scale   
+```{r}
+comp.smry(p$E)
+
+p$E |>
+  t() |> 
+  as.data.frame() |>
+  pivot_longer(everything()) |>
+  ggplot(aes(value)) +
+  geom_histogram(bins = 100) +
+  labs(x = "Value", y = "Count") +
+  facet_wrap(~ name, scales = "free")
+```
+
+## Settling / Hatching Evolvability
+```{r}
+e.ratio <- p$E[2, ] / p$E[1, ]
+
+e.ratio |> 
+  log() |> 
+  vecSmry() |>
+  exp() |> 
+  rbind() |>
+  as.data.frame() |>
+  pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
+
+data.frame(ratio = e.ratio) |> 
+  ggplot(aes(ratio)) +
+  geom_histogram(bins = 100) +
+  scale_x_log10() +
+  labs(x = "Settling / Hatching Evolvability", y = "Count")
+```
+
+
+## Evolvability (from G matrix)    
+This is for a random set of selection gradients.  
+```{r}
+# Get the posterior samples by averaging across all of the random beta's
+eB_posterior_hatch_settle <- apply(e.params_BetaMCMC$post.dist$eB, 1, mean)
+rB_posterior_hatch_settle <- apply(e.params_BetaMCMC$post.dist$rB, 1, mean)
+cB_posterior_hatch_settle <- apply(e.params_BetaMCMC$post.dist$cB, 1, mean)
+aB_posterior_hatch_settle <- apply(e.params_BetaMCMC$post.dist$aB, 1, mean)
+iB_posterior_hatch_settle <- apply(e.params_BetaMCMC$post.dist$iB, 1, mean)
+
+E_hatch_settle <- 
+  data.frame(name = c(rep("eB",length(eB_posterior_hatch_settle)),
+                      rep("rB",length(rB_posterior_hatch_settle)),
+                      rep("cB",length(cB_posterior_hatch_settle)),
+                      rep("aB",length(aB_posterior_hatch_settle)),
+                      rep("iB",length(iB_posterior_hatch_settle))),
+             value = c(eB_posterior_hatch_settle,
+                       rB_posterior_hatch_settle,
+                       cB_posterior_hatch_settle,
+                       aB_posterior_hatch_settle,
+                       iB_posterior_hatch_settle))
+
+E_hatch_settle <- E_hatch_settle |> 
+  mutate(name = factor(name, levels = c("eB","rB","cB", "iB", "aB"))) |>
+  group_by(name) |>
+  summarise(summary = list(round(vecSmry(value), 6)), .groups = "drop") |> unnest_wider(summary)
+
+pander::pander(E_hatch_settle)
+```

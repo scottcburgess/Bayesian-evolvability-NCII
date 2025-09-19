@@ -1,5 +1,5 @@
 ---
-title: Settling Prediction
+title: Summary of Model IV 
 output:
   html_document:
     toc: yes
@@ -21,7 +21,7 @@ rm(list = ls())
 library(tidyverse)
 library(runjags)
 load("Model_IV_posterior_20230117_0038.rdata")
-source("0_misc_funcs.R")
+source("../0_misc_funcs.R")
 ```
 
 ## Run Summary

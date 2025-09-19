@@ -3,15 +3,15 @@ library(tidyverse)
 library(runjags)
 
 # MCMC parameters
-chains <- 10
+chains <- 8 #10
 adapt <- 100
-burnin <- 50000
-total.sample <- 50000 
-thin <- 100
+burnin <- 500 #50000
+total.sample <- 1000 #50000 
+thin <- 1 #100
 
 # Load data
-trunk_tail.df <- readRDS('../1_Data/head_tail_data.rds') 
-hatch_settle.df <- readRDS('../1_Data/hatch_settle_data.rds') 
+trunk_tail.df <- readRDS('Data/trunk_tail_data.rds') 
+hatch_settle.df <- readRDS('Data/hatch_settle_data.rds') 
 
 # Filter for blocks that occur in both
 blocks.to.keep <- table(
@@ -59,13 +59,13 @@ post <- run.jags(
     dam = as.numeric(factor(trunk_tail.df$dam)),
     interaction = as.numeric(factor(trunk_tail.df$interaction)),
     block.mean.range = cbind(
-      round(range(trunk_tail.df$head)), 
+      round(range(trunk_tail.df$trunk)), 
       round(range(trunk_tail.df$tail)),
       qlogis(c(0.4, 0.95))
     ),
-    length1 = cbind(trunk_tail.df$head, trunk_tail.df$tail),
-    length2 = cbind(trunk_tail.df$head, trunk_tail.df$tail),
-    length3 = cbind(trunk_tail.df$head, trunk_tail.df$tail),
+    length1 = cbind(trunk_tail.df$trunk, trunk_tail.df$tail),
+    length2 = cbind(trunk_tail.df$trunk, trunk_tail.df$tail),
+    length3 = cbind(trunk_tail.df$trunk, trunk_tail.df$tail),
     n.settle = nrow(hatch_settle.df),
     settle.block = as.numeric(factor(hatch_settle.df$block)),
     settle.sire = as.numeric(factor(hatch_settle.df$sire)),
@@ -136,7 +136,7 @@ post <- run.jags(
     }
     
     
-    # ---- head/tail likelihood ----
+    # ---- trunk/tail likelihood ----
     for(l in 1:n.larvae) {
       for(t in 1:2) {        
         # likelihood of overall mean for computing evolvability
@@ -153,7 +153,7 @@ post <- run.jags(
       length3[l, ] ~ dmnorm.vcov(length.mu[l, ], resid.vcov[1:2, 1:2])
       
       # draw for posterior predictive check
-      length.ppc[l, 1:2] ~ dmnorm.vcov(length.mu[l, ], resid.vcov[1:2, 1:2])
+      length.ppd[l, 1:2] ~ dmnorm.vcov(length.mu[l, ], resid.vcov[1:2, 1:2])
     }
     
     
@@ -169,15 +169,15 @@ post <- run.jags(
         interaction.eff[settle.interaction[s], 3]
       settle3[s] ~ dbern(pr.settle[s])
       
-      # draw for psoterior predictive check
-      settle.ppc[s] ~ dbern(pr.settle[s])
+      # draw for posterior predictive check
+      settle.ppd[s] ~ dbern(pr.settle[s])
     }
   }',
   monitor = c(
     'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 
     'resid.vcov', 'block.mean', 'sire.eff', 'dam.eff', 
     'interaction.eff', 'mean.overall', 'overall.block.mean',
-    'length.ppc', 'settle.ppc'
+    'length.ppd', 'settle.ppd'
   ), 
   inits = function() list(
     .RNG.name = 'lecuyer::RngStream',
@@ -204,6 +204,7 @@ dimnames(p$block.mean)[[2]] <-
   dimnames(p$interaction.eff)[[2]] <- 
   dimnames(p$mean.overall)[[1]] <- 
   dimnames(p$overall.block.mean)[[2]] <- c('Trunk', 'Tail', 'Settling')
+dimnames(p$length.ppd)[[2]] <- c('Trunk', 'Tail')
 dimnames(p$sire.vcov)[1:2] <-
   dimnames(p$dam.vcov)[1:2] <-
   dimnames(p$interaction.vcov)[1:2] <-
@@ -238,12 +239,133 @@ qgparams.post <- sapply(dimnames(p$overall.block.mean)[[2]], function(m) {
 }, simplify = FALSE)
 
 
-# Save all objects and plot posterior summaries
-save.image(format(end, '../3_Model_outputs/Model_I_posterior_%Y%m%d_%H%M.rdata'))
+# CODA summary ------------------------------------------------------------
 
+post.smry <- summary(
+  post,
+  vars = c(
+    'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 
+    'resid.vcov', 'block.mean', 'sire.eff', 'dam.eff', 
+    'interaction.eff', 'mean.overall', 'overall.block.mean'
+  ) 
+) |>  
+  as.data.frame() |> 
+  rownames_to_column('metric') |>
+  select(metric, SSeff:psrf) |> 
+  pivot_longer(-metric, names_to = 'diag', values_to = 'values') 
+
+diag.smry <- post.smry |> 
+  group_by(diag) |> 
+  summarize(
+    median = median(values),
+    lower = unname(quantile(values, 0.025)),
+    upper = unname(quantile(values, 0.975)),
+    .groups = 'drop'
+  )
+
+
+# Posterior Predictive Check ----------------------------------------------
+
+length.obs <- cbind(Trunk = trunk_tail.df$trunk, Tail = trunk_tail.df$tail)
+
+ppc <- expand_grid(
+  metric = colnames(length.obs),
+  id = 1:nrow(length.obs)
+) |> 
+  mutate(metric = factor(metric, colnames(length.obs))) |> 
+  bind_rows(
+    data.frame(metric = 'Settling', id = 1:nrow(hatch_settle.df))
+  )
+
+ppc$pct.gte.obs <- sapply(1:nrow(ppc), function(i) {
+  id <- ppc$id[i]
+  
+  obs <- if(ppc$metric[i] == 'Settling') {
+    hatch_settle.df$outcome[id]
+  } else {
+    length.obs[id, ppc$metric[id]]
+  }
+
+  ppd <- if(ppc$metric[i] == 'Settling') {
+    p$settle.ppd[id, ]
+  } else {
+    p$length.ppd[id, ppc$metric[id], ]
+  }
+  
+  mean(obs >= ppd)
+})
+
+ppc$mean.diff <- sapply(1:nrow(ppc), function(i) {
+  id <- ppc$id[i]
+  
+  obs <- if(ppc$metric[i] == 'Settling') {
+    hatch_settle.df$outcome[id]
+  } else {
+    length.obs[id, ppc$metric[id]]
+  }
+  
+  ppd <- if(ppc$metric[i] == 'Settling') {
+    p$settle.ppd[id, ]
+  } else {
+    p$length.ppd[id, ppc$metric[id], ]
+  }
+  
+  mean(obs - ppd)
+})
+
+ppc.smry <- ppc |> 
+  group_by(metric) |> 
+  summarize(
+    median.pct = median(pct.gte.obs),
+    lower.pct = unname(quantile(pct.gte.obs, 0.025)),
+    upper.pct = unname(quantile(pct.gte.obs, 0.975)),   
+    median.diff = median(mean.diff),
+    lower.diff = unname(quantile(mean.diff, 0.025)),
+    upper.diff = unname(quantile(mean.diff, 0.975)),
+    .groups = 'drop'
+  )
+
+
+# Save all objects
+save.image(format(end, 'Model_outputs/Model_IV_posterior_%Y%m%d_%H%M.rdata'))
+
+
+# Plot posterior distributions
 plot(
   post,
-  file = format(end, '../3_Model_outputs/Model_I_plots_%Y%m%d_%H%M.pdf')
+  vars = c(
+    'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 
+    'resid.vcov', 'block.mean', 'sire.eff', 'dam.eff', 
+    'interaction.eff', 'mean.overall', 'overall.block.mean'
+  ),
+  file = format(end, 'Model_outputs/Model_IV_plots_%Y%m%d_%H%M.pdf')
 )
+
+
+# Plot diagnostics
+pdf(format(end, "Model_outputs/Model_IV_diagnostics_%Y%m%d_%H%M.pdf"))
+
+ggplot(post.smry) +
+  geom_histogram(aes(values), bins = 20) +
+  facet_wrap(~diag, scales = 'free_x')
+
+ggplot(ppc) +
+  geom_histogram(aes(pct.gte.obs), binwidth = 0.05) +
+  geom_vline(aes(xintercept = median.pct), data = ppc.smry, color = 'red') +
+  geom_vline(aes(xintercept = lower.pct), data = ppc.smry, linetype = 'dashed', color = 'red') +
+  geom_vline(aes(xintercept = upper.pct), data = ppc.smry, linetype = 'dashed', color = 'red') +
+  facet_wrap(~ metric, scales = 'free') +
+  labs(x = 'Percent of PPD >= Observed', y = 'Count')
+
+ggplot(ppc) +
+  geom_histogram(aes(mean.diff), bins = 50) +
+  geom_vline(aes(xintercept = median.diff), data = ppc.smry, color = 'red') +
+  geom_vline(aes(xintercept = lower.diff), data = ppc.smry, linetype = 'dashed', color = 'red') +
+  geom_vline(aes(xintercept = upper.diff), data = ppc.smry, linetype = 'dashed', color = 'red') +
+  facet_wrap(~ metric, scales = 'free') +
+  labs(x = 'Metric Difference (Observed - PPD)', y = 'Count')
+
+dev.off()
+
 
 print(elapsed)

@@ -3,27 +3,27 @@ library('dplyr')
 
 # Table 1 ----
 # Load data
-head_tail_data <- readRDS("1_Data/head_tail_data.rds") 
-hatch_settle_data <- readRDS("1_Data/hatch_settle_data.rds") 
+trunk_tail_data <- readRDS("Data/trunk_tail_data.rds") 
+hatch_settle_data <- readRDS("Data/hatch_settle_data.rds") 
 
 # Summarize trunk and tail measurements
 # No. blocks, No. sires, No. dams, No. full sib families
-head_tail_data |> 
+trunk_tail_data |> 
   summarise(n.blocks=n_distinct(block),
             n.sire=n_distinct(sire),
             n.dam=n_distinct(dam),
             n.fam=n_distinct(interaction))
 # Mean (±sd) no. of measurements per full sib family
-head_tail_data |> 
+trunk_tail_data |> 
   group_by(interaction) |> 
-  summarize(n.trunk=length(head),
+  summarize(n.trunk=length(trunk),
             n.tail=length(tail),
             mean.trunk=mean(n.trunk)) |> 
   summarize(mean.trunk=mean(n.trunk),
             stdev.trunk=sd(n.trunk),
             total.trunk=sum(n.trunk))
 
-head_tail_data |> 
+trunk_tail_data |> 
   group_by(block) |>
   summarise(
     n.sire=n_distinct(sire),

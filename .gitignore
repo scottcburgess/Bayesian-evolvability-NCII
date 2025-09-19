@@ -8,5 +8,5 @@
 *.rdata
 *.html
 *.pdf
-old/
+_devel/
 Manuscript/

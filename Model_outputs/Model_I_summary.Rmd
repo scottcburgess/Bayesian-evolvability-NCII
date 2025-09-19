@@ -1,0 +1,194 @@
+---
+title: Summary of Model I (Trunk, Tail)
+output:
+  html_document:
+    toc: yes
+    toc_float: yes
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  comment = NA,
+  fig.height = 3,
+  fig.width = 8
+)
+options(scipen = 10, digits = 3)
+
+rm(list = ls())
+library(tidyverse)
+library(runjags)
+load("Model_I_posterior_20250917_2054.rdata")
+source("../0_misc_funcs.R")
+```
+
+## Run Summary
+
+Chains : `r length(post$mcmc)`  
+Burn-in : `r post$burnin`  
+Samples per chain : `r post$sample`  
+Total samples : `r post$sample * length(post$mcmc)`  
+Thinning : `r post$thin`   
+Duration: `r paste(round(elapsed, 1), units(elapsed))`  
+End Time: `r format(end, "%Y-%m-%d %H:%M")`   
+
+## Posterior Summary
+```{r, include=FALSE}
+smry <- summary(
+  post, 
+  vars = c(
+    "deviance", "sire.vcov", "dam.vcov", 
+    "interaction.vcov", "resid.vcov"
+  )
+)
+```
+```{r}
+smry |> 
+  as.data.frame() |> 
+  pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
+```
+\newpage  
+
+## V~A~
+```{r}
+comp.smry(p$VA)
+plot.metric(p$VA)
+```
+
+## V~M~
+```{r}
+comp.smry(p$VM)
+plot.metric(p$VM)
+```
+\newpage  
+
+## V~D~
+```{r}
+comp.smry(p$VD)
+plot.metric(p$VD)
+```
+
+## V~P~
+```{r}
+comp.smry(p$VP)
+plot.metric(p$VP)
+```
+\newpage  
+
+## V~M~ / V~A~
+```{r}
+vm.va <- p$VM / p$VA
+comp.smry(vm.va, 1)
+plot.metric(vm.va) + scale_x_log10()
+```
+
+## V~D~ / V~A~
+```{r}
+vd.va <- p$VD / p$VA
+comp.smry(vd.va, 1)
+plot.metric(vd.va) + scale_x_log10()
+```
+\newpage  
+
+## Heritability
+```{r}
+comp.smry(p$H)
+plot.metric(p$H)
+```
+\newpage  
+
+## Evolvability (single traits)
+```{r}
+comp.smry(p$E)
+
+p$E |> 
+  t() |> 
+  as.data.frame() |> 
+  pivot_longer(everything()) |> 
+  ggplot(aes(value)) +
+  geom_histogram(bins = 100) +
+  labs(x = "Value", y = "Count") +
+  facet_wrap(~ name, scales = "free")
+```
+
+## Tail / Trunk Evolvability
+```{r}
+e.ratio <- p$E[2, ] / p$E[1, ]
+
+e.ratio |> 
+  log() |> 
+  vecSmry() |>
+  exp() |> 
+  rbind() |>
+  as.data.frame() |>
+  pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
+
+data.frame(ratio = e.ratio) |> 
+  ggplot(aes(ratio)) +
+  geom_histogram(bins = 100) +
+  scale_x_log10() +
+  labs(x = "Tail / Trunk Evolvability", y = "Count")
+```
+
+## Evolvability (from G matrix) v1  
+This is for a random set of selection gradients.
+```{r}
+# Get the posterior samples by averaging across all of the random beta's
+eB_posterior_head_tail <- apply(e.params_BetaMCMC$post.dist$eB, 1, mean)
+rB_posterior_head_tail <- apply(e.params_BetaMCMC$post.dist$rB, 1, mean)
+cB_posterior_head_tail <- apply(e.params_BetaMCMC$post.dist$cB, 1, mean)
+aB_posterior_head_tail <- apply(e.params_BetaMCMC$post.dist$aB, 1, mean)
+iB_posterior_head_tail <- apply(e.params_BetaMCMC$post.dist$iB, 1, mean)
+
+E_trunk_tail <- 
+  data.frame(name = c(rep("eB",length(eB_posterior_head_tail)),
+                      rep("rB",length(rB_posterior_head_tail)),
+                      rep("cB",length(cB_posterior_head_tail)),
+                      rep("aB",length(aB_posterior_head_tail)),
+                      rep("iB",length(iB_posterior_head_tail))),
+             value = c(eB_posterior_head_tail,
+                       rB_posterior_head_tail,
+                       cB_posterior_head_tail,
+                       aB_posterior_head_tail,
+                       iB_posterior_head_tail))
+
+E_trunk_tail <- E_trunk_tail |> 
+  mutate(name = factor(name, levels = c("eB","rB","cB", "iB", "aB"))) |>
+  group_by(name) |>
+  summarise(summary = list(round(vecSmry(value), 6)), .groups = "drop") |> unnest_wider(summary)
+
+pander::pander(E_trunk_tail)
+```
+
+## Evolvability (from G matrix) v2 
+This is for a specific set of selection gradients:    
+Beta_index = 1 is $\beta = \begin{bmatrix} 0 \\ 1 \end{bmatrix}$ = strong selection for longer tails only  
+Beta_index = 2 is $\beta = \begin{bmatrix} -1 \\ -1 \end{bmatrix}$ = strong selection for shorter trunks and shorter tails  
+Beta_index = 3 is $\beta = \begin{bmatrix} 1 \\ -1 \end{bmatrix}$ = strong selection for longer trunks and shorter tails  
+
+```{r}
+summary_stacked <- e.params_beta %>%
+  pivot_longer(cols = c(e, r, c, a , i), 
+               names_to = "metric", 
+               values_to = "value") %>%
+    mutate(metric = recode(metric,
+                         e = "evolvability",
+                         r = "respondability",
+                         c = "conditional",
+                         a = "autonomy (cB/eB)",
+                         i = "integration"),
+         metric = factor(metric, 
+                         levels = c("evolvability",
+                                    "respondability",
+                                    "conditional",
+                                    "autonomy (cB/eB)",
+                                    "integration"))) %>% 
+  group_by(Beta_index, metric) %>%
+  summarise(summary = list(round(vecSmry(value), 6)), .groups = "drop") %>%
+  unnest_wider(summary) %>%
+  arrange(metric, Beta_index)
+
+pander::pander(summary_stacked)
+```

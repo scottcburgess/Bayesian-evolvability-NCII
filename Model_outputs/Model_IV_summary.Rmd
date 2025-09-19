@@ -1,5 +1,5 @@
 ---
-title: Head/Tail Ratio Variance Components
+title: Summary of Model IV
 output:
   html_document:
     toc: yes
@@ -20,8 +20,8 @@ options(scipen = 10, digits = 3)
 rm(list = ls())
 library(tidyverse)
 library(runjags)
-source("0_misc_funcs.R")
-load("Model_II_posterior_20230117_0903.rdata")
+load("Model_IV_posterior_20250918_0443.rdata")
+source("../0_misc_funcs.R")
 ```
 
 ## Run Summary
@@ -38,8 +38,8 @@ End Time: `r format(end, "%Y-%m-%d %H:%M")`
 ```{r, include=FALSE}
 smry <- summary(
   post, 
-  vars = c(
-    "deviance", "additive.var", "maternal.var", "interaction.var", "resid.var"
+  vars = c("sire.vcov", "dam.vcov", 
+    "interaction.vcov", "resid.vcov"
   )
 )
 ```
@@ -50,61 +50,27 @@ smry |>
 ```
 \newpage  
 
-## V~A~
+## G matrix  
 ```{r}
-comp.smry(p$VA)
-plot.metric(p$VA)
+comp.smry(p$VA[1:2,1:2,])
+plot.metric(p$VA[1:2,1:2,])
 ```
 
-## V~M~
-```{r}
-comp.smry(p$VM)
-plot.metric(p$VM)
-```
-\newpage  
 
-## V~D~
+## Selection differentials, s<sub>g</sub> = cov<sub>g</sub>(w, z)  
+Notes: 1) shown here are on the length x logit scale, we need on length x probability scale. QGglmm::QGparams needs to evaluate the whole matrix, not just the diagonals. 2) we need relative fitess = p / mean(p)...I think Var(p/mean(p)) = Var(p) / mean(p)^2, so var.obs / mean.obs^2  ?  
+Trunk - Settling. 
 ```{r}
-comp.smry(p$VD)
-plot.metric(p$VD)
+vecSmry(p$VA[3,1,])
 ```
 
-## V~P~
+Tail - Settling
 ```{r}
-comp.smry(p$VP)
-plot.metric(p$VP)
-```
-\newpage  
-
-## V~M~ / V~A~
-```{r}
-vm.va <- p$VM / p$VA
-comp.smry(vm.va, 1)
-plot.metric(vm.va) + scale_x_log10()
+vecSmry(p$VA[3,2,])
 ```
 
-## V~D~ / V~A~
+## Selection gradients, &beta;<sub>g</sub> = G<sup>-1</sup>s<sub>g</sub>  
+Work in progress...  
 ```{r}
-vd.va <- p$VD / p$VA
-comp.smry(vd.va, 1)
-plot.metric(vd.va) + scale_x_log10()
-```
-\newpage  
-
-## Heritability
-```{r}
-comp.smry(p$H)
-plot.metric(p$H)
-```
-\newpage  
-
-## Evolvability
-```{r}
-comp.smry(p$E)
-
-p$E |> 
-  enframe() |> 
-  ggplot(aes(value)) +
-  geom_histogram(bins = 100) +
-  labs(x = "Value", y = "Count") 
+comp.smry(p$VA[1:2,1:2,])
 ```

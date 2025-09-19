@@ -3,15 +3,15 @@ library(tidyverse)
 library(runjags)
 
 # MCMC parameters
-chains <- 10
+chains <- 8 #10
 adapt <- 100
-burnin <- 50000
-total.sample <- 50000
-thin <- 100
+burnin <- 1000 #50000
+total.sample <- 10000 #50000
+thin <- 1 #100
 
 # Load data
-df <- readRDS("1_Data/head_tail_data.rds")
-df$log.ratio <- log(df$head / df$tail)
+df <- readRDS('Data/trunk_tail_data.rds')
+df$log.ratio <- log(df$trunk / df$tail)
 
 # Run model
 post <- run.jags(
@@ -30,7 +30,7 @@ post <- run.jags(
     log.ratio2 = df$log.ratio,
     log.ratio3 = df$log.ratio
   ),
-  model = "model {
+  model = 'model {
     # ---- overall mean ----
     mean.overall ~ dunif(log.ratio.range[1], log.ratio.range[2])
     var.overall ~ dunif(0, 1e5)
@@ -81,24 +81,24 @@ post <- run.jags(
       log.ratio3[l] ~ dnorm(mu[l], 1 / resid.var)
       
       # draw for posterior predictive check
-      log.ratio.ppc[l] ~ dnorm(mu[l], 1 / resid.var)
+      log.ratio.ppd[l] ~ dnorm(mu[l], 1 / resid.var)
     }
-  }",
+  }',
   monitor = c(
-    "deviance", "sire.var", "dam.var", "interaction.var", "resid.var",
-    "mean.overall", "mean.log.ratio.block", 'log.ratio.ppc[l]'
+    'deviance', 'sire.var', 'dam.var', 'interaction.var', 'resid.var',
+    'mean.overall', 'mean.log.ratio.block', 'log.ratio.ppd'
   ), 
   inits = function() list(
-    .RNG.name = "lecuyer::RngStream",
+    .RNG.name = 'lecuyer::RngStream',
     .RNG.seed = sample(1:9999, 1)
   ),
-  modules = c("glm", "lecuyer"),
+  modules = c('glm', 'lecuyer'),
   n.chains = chains,
   adapt = adapt,
   burnin = burnin,
   sample = ceiling(total.sample / chains),
   thin = thin,
-  method = "parallel"
+  method = 'parallel'
 )
 end <- Sys.time()
 elapsed <- swfscMisc::autoUnits(post$timetaken)
@@ -137,8 +137,96 @@ p$E <- var.obs$VA |>
   mutate(E = var.a.obs / (p$mean.overall ^ 2)) |> 
   pull('E')
 
-save.image(format(end, "3_Model_outputs/Model_II_posterior_%Y%m%d_%H%M.rdata"))
 
-plot(post, file = format(end, "3_Model_outputs/Model_II_plots_%Y%m%d_%H%M.pdf"))
+# CODA summary ------------------------------------------------------------
+
+post.smry <- summary(
+  post,
+  vars = c(
+    'deviance', 'sire.var', 'dam.var', 'interaction.var', 'resid.var',
+    'mean.overall', 'mean.log.ratio.block'
+  ) 
+) |>  
+  as.data.frame() |> 
+  rownames_to_column('metric') |>
+  select(metric, SSeff:psrf) |> 
+  pivot_longer(-metric, names_to = 'diag', values_to = 'values') 
+
+diag.smry <- post.smry |> 
+  group_by(diag) |> 
+  summarize(
+    median = median(values),
+    lower = unname(quantile(values, 0.025)),
+    upper = unname(quantile(values, 0.975)),
+    .groups = 'drop'
+  )
+
+
+# Posterior Predictive Check ----------------------------------------------
+
+ppc <- data.frame(id = 1:nrow(df))
+
+ppc$pct.gte.obs <- sapply(1:nrow(ppc), function(i) {
+  obs <- df$log.ratio[i]
+  ppd <- p$log.ratio.ppd[i, ]
+  mean(obs >= ppd)
+})
+
+ppc$mean.diff <- sapply(1:nrow(ppc), function(i) {
+  obs <- df$log.ratio[i]
+  ppd <- p$log.ratio.ppd[i, ]
+  mean(obs - ppd)
+})
+
+ppc.smry <- ppc |> 
+  summarize(
+    median.pct = median(pct.gte.obs),
+    lower.pct = unname(quantile(pct.gte.obs, 0.025)),
+    upper.pct = unname(quantile(pct.gte.obs, 0.975)),   
+    median.diff = median(mean.diff),
+    lower.diff = unname(quantile(mean.diff, 0.025)),
+    upper.diff = unname(quantile(mean.diff, 0.975)),
+    .groups = 'drop'
+  )
+
+
+# Save all objects
+save.image(format(end, 'Model_outputs/Model_II_posterior_%Y%m%d_%H%M.rdata'))
+
+
+# Plot posterior distributions
+plot(
+  post, 
+  vars = c(
+    'deviance', 'sire.var', 'dam.var', 'interaction.var', 'resid.var',
+    'mean.overall', 'mean.log.ratio.block'
+  ),
+  file = format(end, 'Model_outputs/Model_II_plots_%Y%m%d_%H%M.pdf')
+)
+
+
+# Plot diagnostics
+pdf(format(end, "Model_outputs/Model_II_diagnostics_%Y%m%d_%H%M.pdf"))
+
+ggplot(post.smry) +
+  geom_histogram(aes(values), bins = 20) +
+  facet_wrap(~diag, scales = 'free_x')
+
+ggplot(ppc) +
+  geom_histogram(aes(pct.gte.obs), binwidth = 0.05) +
+  geom_vline(aes(xintercept = median.pct), data = ppc.smry, color = 'red') +
+  geom_vline(aes(xintercept = lower.pct), data = ppc.smry, linetype = 'dashed', color = 'red') +
+  geom_vline(aes(xintercept = upper.pct), data = ppc.smry, linetype = 'dashed', color = 'red') +
+  labs(x = 'Percent of PPD >= Observed', y = 'Count')
+
+ggplot(ppc) +
+  geom_histogram(aes(mean.diff), bins = 50) +
+  geom_vline(aes(xintercept = median.diff), data = ppc.smry, color = 'red') +
+  geom_vline(aes(xintercept = lower.diff), data = ppc.smry, linetype = 'dashed', color = 'red') +
+  geom_vline(aes(xintercept = upper.diff), data = ppc.smry, linetype = 'dashed', color = 'red') +
+  labs(x = 'Log Ratio Difference (Observed - PPD)', y = 'Count')
+
+dev.off()
+
 
 print(elapsed)
