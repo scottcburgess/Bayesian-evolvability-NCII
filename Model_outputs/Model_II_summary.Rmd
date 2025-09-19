@@ -1,5 +1,5 @@
 ---
-title: Head and Tail Length Variance Components
+title: Summary of Model II
 output:
   html_document:
     toc: yes
@@ -20,8 +20,8 @@ options(scipen = 10, digits = 3)
 rm(list = ls())
 library(tidyverse)
 library(runjags)
-load("../3_Model_outputs/Model_I_posterior_20250910_2306.rdata")
-source("../2_Model_R_scripts/0_misc_funcs.R")
+source("../0_misc_funcs.R")
+load("Model_II_posterior_20250917_1218.rdata")
 ```
 
 ## Run Summary
@@ -39,8 +39,7 @@ End Time: `r format(end, "%Y-%m-%d %H:%M")`
 smry <- summary(
   post, 
   vars = c(
-    "deviance", "sire.vcov", "dam.vcov", 
-    "interaction.vcov", "resid.vcov"
+    "deviance", "sire.var", "dam.var", "interaction.var", "resid.var"
   )
 )
 ```
@@ -51,83 +50,66 @@ smry |>
 ```
 \newpage  
 
-## V~A~
+
+## V~A~ on the observed scale   
 ```{r}
-comp.smry(p$VA)
-plot.metric(p$VA)
+# p$VA is latent scale variance
+comp.smry(var.obs$VA$var.a.obs)
+plot.metric(var.obs$VA$var.a.obs)
 ```
 
-## V~M~
+## V~M~ on the observed scale    
 ```{r}
-comp.smry(p$VM)
-plot.metric(p$VM)
-```
-\newpage  
-
-## V~D~
-```{r}
-comp.smry(p$VD)
-plot.metric(p$VD)
-```
-
-## V~P~
-```{r}
-comp.smry(p$VP)
-plot.metric(p$VP)
+# p$VM is latent scale variance
+comp.smry(var.obs$VM$var.a.obs)
+plot.metric(var.obs$VM$var.a.obs)
 ```
 \newpage  
 
-## V~M~ / V~A~
+## V~D~ on the observed scale   
 ```{r}
-vm.va <- p$VM / p$VA
+# p$VD is latent scale variance
+comp.smry(var.obs$VD$var.a.obs)
+plot.metric(var.obs$VD$var.a.obs)
+```
+
+## V~P~ on the observed scale    
+```{r}
+# p$VP is latent scale variance
+comp.smry(var.obs$VA$var.obs)
+plot.metric(var.obs$VA$var.obs)
+```
+\newpage  
+
+## V~M~ / V~A~ on the observed scale    
+```{r}
+vm.va <- var.obs$VM$var.a.obs / var.obs$VA$var.a.obs
 comp.smry(vm.va, 1)
 plot.metric(vm.va) + scale_x_log10()
 ```
 
-## V~D~ / V~A~
+## V~D~ / V~A~ on the observed scale    
 ```{r}
-vd.va <- p$VD / p$VA
+vd.va <- var.obs$VD$var.a.obs / var.obs$VA$var.a.obs
 comp.smry(vd.va, 1)
 plot.metric(vd.va) + scale_x_log10()
 ```
 \newpage  
 
-## Heritability
+## Heritability on the observed scale    
 ```{r}
 comp.smry(p$H)
 plot.metric(p$H)
 ```
 \newpage  
 
-## Evolvability
+## Evolvability on the observed scale   
 ```{r}
 comp.smry(p$E)
 
 p$E |> 
-  t() |> 
-  as.data.frame() |> 
-  pivot_longer(everything()) |> 
+  enframe() |> 
   ggplot(aes(value)) +
   geom_histogram(bins = 100) +
-  labs(x = "Value", y = "Count") +
-  facet_wrap(~ name, scales = "free")
-```
-
-## Tail / Head Evolvability
-```{r}
-e.ratio <- p$E[2, ] / p$E[1, ]
-
-e.ratio |> 
-  log() |> 
-  vecSmry() |>
-  exp() |> 
-  rbind() |>
-  as.data.frame() |>
-  pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
-
-data.frame(ratio = e.ratio) |> 
-  ggplot(aes(ratio)) +
-  geom_histogram(bins = 100) +
-  scale_x_log10() +
-  labs(x = "Tail / Head Evolvability", y = "Count")
+  labs(x = "Value", y = "Count") 
 ```

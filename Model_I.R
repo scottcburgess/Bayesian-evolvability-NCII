@@ -10,7 +10,7 @@ total.sample <- 10000 #50000
 thin <- 10
 
 # Load data
-df <- readRDS("1_Data/head_tail_data.rds") 
+df <- readRDS("Data/trunk_tail_data.rds") 
 
 # Run model
 post <- run.jags(
@@ -24,10 +24,10 @@ post <- run.jags(
     sire = as.numeric(factor(df$sire)),
     dam = as.numeric(factor(df$dam)),
     interaction = as.numeric(factor(df$interaction)),
-    length.range = cbind(round(range(df$head)), round(range(df$tail))),
-    length1 = cbind(df$head, df$tail),
-    length2 = cbind(df$head, df$tail),
-    length3 = cbind(df$head, df$tail)
+    length.range = cbind(round(range(df$trunk)), round(range(df$tail))),
+    length1 = cbind(df$trunk, df$tail),
+    length2 = cbind(df$trunk, df$tail),
+    length3 = cbind(df$trunk, df$tail)
   ),
   model = "model {
     # for each t-trait...
@@ -103,7 +103,6 @@ post <- run.jags(
       }
       # likelihood of l-th larvae for both traits from multivariate normal
       length3[l, ] ~ dmnorm.vcov(mu[l, ], resid.vcov)
-      
       # draw for posterior predictive check
       length.ppc[l, 1:2] ~ dmnorm.vcov(mu[l, ], resid.vcov)
     }
@@ -145,11 +144,11 @@ p$VD <- 4 * p$interaction.vcov
 p$VP <- p$VA + p$VM + p$VD + p$resid.vcov
 p$H <- p$VA / p$VP
 p$E <- rbind(
-  head = p$VA[1, 1, ] / (p$mean.overall[1, ] ^ 2),
+  trunk = p$VA[1, 1, ] / (p$mean.overall[1, ] ^ 2),
   tail = p$VA[2, 2, ] / (p$mean.overall[2, ] ^ 2)
 )
 
-# Compute evolvability
+# Calculate average evolvability parameters of the G-matrix
 e.params_means <- do.call(
   rbind,
   parallel::mclapply(1:dim(p$VA)[3], function(i) {
@@ -159,7 +158,9 @@ e.params_means <- do.call(
     )
   }, mc.cores = 14) 
 )
-  
+
+# Calculate posterior distribution of evolvability parameters 
+# from a random set of selection gradients  
 e.params_BetaMCMC <- evolvability::evolvabilityBetaMCMC(
   G_mcmc = evolvability::meanStdGMCMC(
     t(apply(p$VA, 3, as.vector)),
@@ -169,12 +170,45 @@ e.params_BetaMCMC <- evolvability::evolvabilityBetaMCMC(
   post.dist = TRUE
 )
 
+# Calculate evolvability parameters 
+# along a specific set of selection gradients
+Beta1 <- c(0,1) # strong selection for long tails only
+Beta2 <- c(-1,-1) # strong selection for short trunks and short tails
+Beta3 <- c(1,-1) # strong selection for large trunks and small tails
+B <- matrix(c(Beta1, Beta2, Beta3), nrow = 2, ncol = 3)
+
+e.params_beta <- do.call(
+  rbind,
+  parallel::mclapply(1:dim(p$VA)[3], function(i) {
+    do.call(
+      rbind,
+      lapply(1:ncol(B), function(j) {
+        tmp <- evolvability::evolvabilityBeta(
+          G = p$VA[, , i],
+          Beta = B[, j],
+          means = p$mean.overall[, i]
+        )
+        data.frame(
+          sample = i,           
+          Beta_index = j,       
+          e = tmp$e,
+          r = tmp$r,
+          c = tmp$c,
+          a = tmp$a,
+          i = tmp$i
+        )
+      })
+    )
+  }, mc.cores = 14)
+)
+rownames(e.params_beta) <- NULL
+
 # Save all objects and plot posterior summaries
-save.image(format(end, "3_Model_outputs/Model_I_posterior_%Y%m%d_%H%M.rdata"))
+save.image(format(end, "Model_outputs/Model_I_posterior_%Y%m%d_%H%M.rdata"))
 
 plot(
   post, 
-  file = format(end, "3_Model_outputs/Model_I_plots_%Y%m%d_%H%M.pdf")
+  file = format(end, "Model_outputs/Model_I_plots_%Y%m%d_%H%M.pdf")
 )
 
 print(elapsed)

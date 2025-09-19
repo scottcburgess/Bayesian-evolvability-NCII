@@ -10,7 +10,7 @@ total.sample <- 50000
 thin <- 100
 
 # Load data
-df <- readRDS("1_Data/hatch_settle_data.rds") 
+df <- readRDS("Data/hatch_settle_data.rds") 
 
 # Only keep blocks with both hatching and settling data
 blocks.to.keep <- table(block = df$block, metric = df$metric) |> 
@@ -111,7 +111,7 @@ post <- run.jags(
   }",
   monitor = c(
     "deviance", "sire.vcov", "dam.vcov", "interaction.vcov",
-    "pr.overall", "pr.block", 'outcome.ppc[l]'
+    "pr.overall", "pr.block", 'outcome.ppc'
   ), 
   inits = function() list(
     .RNG.name = "lecuyer::RngStream",
@@ -203,11 +203,11 @@ e.params_BetaMCMC <- evolvability::evolvabilityBetaMCMC(
 
 
 # Save all objects and plot posterior summaries
-save.image(format(end, "3_Model_outputs/Model_III_posterior_%Y%m%d_%H%M.rdata"))
+save.image(format(end, "Model_outputs/Model_III_posterior_%Y%m%d_%H%M.rdata"))
 
 plot(
   post, 
-  file = format(end, "3_Model_outputs/Model_III_plots_%Y%m%d_%H%M.pdf")
+  file = format(end, "Model_outputs/Model_III_plots_%Y%m%d_%H%M.pdf")
 )
 
 print(elapsed)

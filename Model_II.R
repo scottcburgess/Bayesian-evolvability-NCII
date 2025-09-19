@@ -10,8 +10,8 @@ total.sample <- 50000
 thin <- 100
 
 # Load data
-df <- readRDS("1_Data/head_tail_data.rds")
-df$log.ratio <- log(df$head / df$tail)
+df <- readRDS("Data/trunk_tail_data.rds")
+df$log.ratio <- log(df$trunk / df$tail)
 
 # Run model
 post <- run.jags(
@@ -86,7 +86,7 @@ post <- run.jags(
   }",
   monitor = c(
     "deviance", "sire.var", "dam.var", "interaction.var", "resid.var",
-    "mean.overall", "mean.log.ratio.block", 'log.ratio.ppc[l]'
+    "mean.overall", "mean.log.ratio.block", 'log.ratio.ppc'
   ), 
   inits = function() list(
     .RNG.name = "lecuyer::RngStream",
@@ -137,8 +137,8 @@ p$E <- var.obs$VA |>
   mutate(E = var.a.obs / (p$mean.overall ^ 2)) |> 
   pull('E')
 
-save.image(format(end, "3_Model_outputs/Model_II_posterior_%Y%m%d_%H%M.rdata"))
+save.image(format(end, "Model_outputs/Model_II_posterior_%Y%m%d_%H%M.rdata"))
 
-plot(post, file = format(end, "3_Model_outputs/Model_II_plots_%Y%m%d_%H%M.pdf"))
+plot(post, file = format(end, "Model_outputs/Model_II_plots_%Y%m%d_%H%M.pdf"))
 
 print(elapsed)

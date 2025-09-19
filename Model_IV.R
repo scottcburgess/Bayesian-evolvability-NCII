@@ -10,8 +10,8 @@ total.sample <- 50000
 thin <- 100
 
 # Load data
-trunk_tail.df <- readRDS('../1_Data/head_tail_data.rds') 
-hatch_settle.df <- readRDS('../1_Data/hatch_settle_data.rds') 
+trunk_tail.df <- readRDS('Data/trunk_tail_data.rds') 
+hatch_settle.df <- readRDS('Data/hatch_settle_data.rds') 
 
 # Filter for blocks that occur in both
 blocks.to.keep <- table(
@@ -59,13 +59,13 @@ post <- run.jags(
     dam = as.numeric(factor(trunk_tail.df$dam)),
     interaction = as.numeric(factor(trunk_tail.df$interaction)),
     block.mean.range = cbind(
-      round(range(trunk_tail.df$head)), 
+      round(range(trunk_tail.df$trunk)), 
       round(range(trunk_tail.df$tail)),
       qlogis(c(0.4, 0.95))
     ),
-    length1 = cbind(trunk_tail.df$head, trunk_tail.df$tail),
-    length2 = cbind(trunk_tail.df$head, trunk_tail.df$tail),
-    length3 = cbind(trunk_tail.df$head, trunk_tail.df$tail),
+    length1 = cbind(trunk_tail.df$trunk, trunk_tail.df$tail),
+    length2 = cbind(trunk_tail.df$trunk, trunk_tail.df$tail),
+    length3 = cbind(trunk_tail.df$trunk, trunk_tail.df$tail),
     n.settle = nrow(hatch_settle.df),
     settle.block = as.numeric(factor(hatch_settle.df$block)),
     settle.sire = as.numeric(factor(hatch_settle.df$sire)),
@@ -136,7 +136,7 @@ post <- run.jags(
     }
     
     
-    # ---- head/tail likelihood ----
+    # ---- trunk/tail likelihood ----
     for(l in 1:n.larvae) {
       for(t in 1:2) {        
         # likelihood of overall mean for computing evolvability
@@ -169,7 +169,7 @@ post <- run.jags(
         interaction.eff[settle.interaction[s], 3]
       settle3[s] ~ dbern(pr.settle[s])
       
-      # draw for psoterior predictive check
+      # draw for posterior predictive check
       settle.ppc[s] ~ dbern(pr.settle[s])
     }
   }',
@@ -239,11 +239,11 @@ qgparams.post <- sapply(dimnames(p$overall.block.mean)[[2]], function(m) {
 
 
 # Save all objects and plot posterior summaries
-save.image(format(end, '../3_Model_outputs/Model_I_posterior_%Y%m%d_%H%M.rdata'))
+save.image(format(end, 'Model_outputs/Model_IV_posterior_%Y%m%d_%H%M.rdata'))
 
 plot(
   post,
-  file = format(end, '../3_Model_outputs/Model_I_plots_%Y%m%d_%H%M.pdf')
+  file = format(end, 'Model_outputs/Model_IV_plots_%Y%m%d_%H%M.pdf')
 )
 
 print(elapsed)

@@ -1,34 +1,22 @@
-# This is a re-imagined Model IV, based on reviewer comments.
-# The model is constructed using MCMCglmm.
-# The goal is to fit trunk length, tail length, and probability of settlement as a single G-matrix
-# Trunk and tail length measured on the same larvae, 
-# but settlement was measured on different larvae from the same full-sib family (=interaction),
-# so cannot estimate residual covariances among all traits at the individual level
-# (i.e, residual covariance between settle and head/tail is not estimable)
-# So need to constrain the residual covariance matrix.
-# Otherwise, settle can covary with head and tail at the sire,dam, and interaction level
-
-
+# This is Model IV converted to MCMCglmm, for comparison
 rm(list = ls())
 library(MCMCglmm)
-library(tidyverse)
-library(patchwork)
-# library(parallel)
-# library(coda)
+library(dplyr)
 
 # Load data
-df_head_tail <- readRDS("1_Data/head_tail_data.rds") 
-df_hatch_settle <- readRDS("1_Data/hatch_settle_data.rds") 
+df_trunk_tail <- readRDS("Data/trunk_tail_data.rds") 
+df_hatch_settle <- readRDS("Data/hatch_settle_data.rds") 
 
 blocks_to_use <- df_hatch_settle |> 
   filter(metric == "settling") |> 
   pull(block) |>
-  unique()
+  unique() |>
+  sort()
 
 df <- df_hatch_settle |> 
   filter(metric == "settling") |> 
-  bind_rows(df_head_tail) |> 
-  select(animal, block, interaction, sire, dam, outcome, head, tail) |> 
+  bind_rows(df_trunk_tail) |> 
+  select(animal, block, interaction, sire, dam, outcome, trunk, tail) |> 
   rename(settle = outcome) |> 
   filter(block %in% blocks_to_use)
 
