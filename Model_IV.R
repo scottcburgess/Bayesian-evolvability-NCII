@@ -223,20 +223,40 @@ p$VP <- p$VA + p$VM + p$VD + p$resid.vcov
 p$H <- p$VA / p$VP
 
 
-# Compute heritability and evolvability based on deVillemereuil et al 2016
-qgparams.post <- sapply(dimnames(p$overall.block.mean)[[2]], function(m) {
-  parallel::mclapply(1:dim(p$VA)[3], function(i) {
-    QGglmm::QGparams(
-      var.a = p$VA[m, m, i],
-      var.p = p$VP[m, m, i],
-      predict = p$overall.block.mean[, m, i],
-      model = if(m == 'Settling') 'binom1.logit' else 'Gaussian',
-      verbose = FALSE
-    )
-  }, mc.cores = 14) |>
-    bind_rows() |>
-    mutate(E = var.a.obs / (p$mean.overall[m, ] ^ 2))
-}, simplify = FALSE)
+# Use QGglmm to extract full variance/covariance matrix on observed scale
+convertVCVscale <- function(p) {
+  # Run QGmvparams across iterations
+  vcv <- parallel::mclapply(
+    X = seq_len(dim(p$VA)[3]),
+    FUN = function(i) {
+      QGglmm::QGmvparams(
+        vcv.G   = p$VA[, , i],
+        vcv.P   = p$VP[, , i],
+        predict = p$overall.block.mean[, , i],
+        models  = c("Gaussian", "Gaussian", "binom1.logit"),
+        verbose = FALSE
+      )
+    },
+    mc.cores = 10
+  ) |> purrr::list_transpose()
+  
+  # Collapse results into matrices or arrays
+  lapply(vcv, function(x) {
+    if (is.null(dim(x[[1]]))) {
+      out <- do.call(rbind, x)
+      dimnames(out) <- list(
+        iter  = dimnames(p$VA)[[3]],
+        trait = dimnames(p$VA)[[1]]
+      )
+    } else {
+      out <- abind::abind(x, along = 3)
+      dimnames(out)[[3]] <- dimnames(p$VA)[[3]]
+    }
+    out
+  })
+}
+
+vcv.obs <- convertVCVscale(p)
 
 
 # CODA summary ------------------------------------------------------------
