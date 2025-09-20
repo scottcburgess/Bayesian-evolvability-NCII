@@ -25,8 +25,6 @@ Powell JA, Archer FI, Burgess SC. In Prep. Evolvability of marine dispersal trai
 
 `Figure_#.R` scripts for making figures in manuscript.  <br />
 `Table_1.R` script for making Table 1 in the manuscript.  <br />
-`model diagnostics.r` script for assessing model performance.  <br />
-
 
 **Data** <br />
 `Moccidentalis All Traits.csv` raw data file. <br />
