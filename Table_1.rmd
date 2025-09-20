@@ -1,0 +1,71 @@
+---
+output: word_document
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  comment = NA,
+  fig.height = 10,
+  fig.width = 10
+)
+
+rm(list = ls())
+library(tidyverse)
+library(pander)
+
+# Load data
+trunk_tail_data <- readRDS("Data/trunk_tail_data.rds") 
+hatch_settle_data <- readRDS("Data/hatch_settle_data.rds") 
+
+df <- bind_rows(
+  trunk_tail_data |> 
+    select(-trunk, -tail) |> 
+    mutate(metric = 'trunk_tail'),
+  hatch_settle_data |> 
+    select(-outcome)
+) |> 
+  mutate(metric = factor(metric, levels = c('trunk_tail', 'hatching', 'settling')))
+```
+
+
+```{r}
+df |> 
+  group_by(metric) |> 
+  summarise(
+    n.blocks = n_distinct(block),
+    n.sire = n_distinct(sire),
+    n.dam = n_distinct(dam),
+    n.fam = n_distinct(interaction),
+    meas.per.fam = n_distinct(animal) / n.fam,
+    n.meas = n_distinct(animal),
+    .groups = 'drop'
+  ) |> 
+  left_join(
+    df |> 
+      group_by(metric, interaction) |> 
+      summarize(n.meas = n(), .groups = 'drop_last') |> 
+      summarize(sd.meas.per.fam = sd(n.meas), .groups = 'drop'),
+    by = 'metric'
+  ) |> 
+  mutate(
+    metric = c('Trunk and tail length', 'Hatching', 'Settlement'),
+    meas.per.fam = paste0(
+      round(meas.per.fam, 1),
+      ' (± ',
+      round(sd.meas.per.fam, 2),
+      ')'
+    )
+  ) |> 
+  select(-sd.meas.per.fam) |> 
+  setNames(c(
+    'Trait', 'No. of blocks', 'No. of sires', 'No. of dams',
+    'No. of full sib families', 
+    'Mean (± sd) no. of measurements per full sib family',
+    'Total no. of measurements'
+  )) |> 
+  pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
+```
+
