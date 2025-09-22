@@ -5,9 +5,9 @@ library(runjags)
 # MCMC parameters
 chains <- 10
 adapt <- 100
-burnin <- 1000 #50000
-total.sample <- 1000 #50000
-thin <- 1 #100
+burnin <- 50000
+total.sample <- 50000
+thin <- 100
 
 # Load data
 df <- readRDS('Data/hatch_settle_data.rds') 
@@ -173,7 +173,7 @@ convertVCVscale <- function(metric, p) {
       models = c('binom1.logit', 'binom1.logit'),
       verbose = FALSE
     )
-  }, mc.cores = parallel::detectCores() - 1) |> 
+  }, mc.cores = 10) |> 
     purrr::list_transpose()
   
   sapply(vcv, function(x) {

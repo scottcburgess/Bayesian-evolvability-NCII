@@ -3,11 +3,11 @@ library(tidyverse)
 library(runjags)
 
 # MCMC parameters
-chains <- 8 #10
+chains <- 10
 adapt <- 100
-burnin <- 500 #50000
-total.sample <- 1000 #50000 
-thin <- 1 #100
+burnin <- 50000
+total.sample <- 50000 
+thin <- 100
 
 # Load data
 trunk_tail.df <- readRDS('Data/trunk_tail_data.rds') 
