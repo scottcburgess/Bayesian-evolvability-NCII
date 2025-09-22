@@ -24,7 +24,7 @@ Powell JA, Archer FI, Burgess SC. In Prep. Evolvability of marine dispersal trai
 `Model_I_MCMCglmm_blocks_random.R` is `Model_I.R` written in MCMCglmm but with blocks as a random effect, for comparison.  
 
 `Figure_#.R` scripts for making figures in manuscript.  <br />
-`Table_1.R` script for making Table 1 in the manuscript.  <br />
+`Table_1.rmd` Rmarkdown for making Table 1 in the manuscript.  <br />
 
 **Data** <br />
 `Moccidentalis All Traits.csv` raw data file. <br />

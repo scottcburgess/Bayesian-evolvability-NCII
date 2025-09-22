@@ -5,9 +5,9 @@ library(runjags)
 # MCMC parameters
 chains <- 10
 adapt <- 100
-burnin <- 50000
+burnin <- 100000
 total.sample <- 50000
-thin <- 100
+thin <- 1000
 
 # Load data
 df <- readRDS('Data/hatch_settle_data.rds') 

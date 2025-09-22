@@ -5,9 +5,9 @@ library(runjags)
 # MCMC parameters
 chains <- 10
 adapt <- 100
-burnin <- 50000
-total.sample <- 50000 
-thin <- 100
+burnin <- 100000
+total.sample <- 10000 
+thin <- 1000
 
 # Load data
 df <- readRDS("Data/trunk_tail_data.rds") 

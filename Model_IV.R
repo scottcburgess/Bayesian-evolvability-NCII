@@ -6,8 +6,8 @@ library(runjags)
 chains <- 10
 adapt <- 100
 burnin <- 50000
-total.sample <- 50000 
-thin <- 100
+total.sample <- 30000 
+thin <- 1000
 
 # Load data
 trunk_tail.df <- readRDS('Data/trunk_tail_data.rds') 
