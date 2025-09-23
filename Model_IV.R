@@ -5,8 +5,8 @@ library(runjags)
 # MCMC parameters
 chains <- 10
 adapt <- 100
-burnin <- 50000
-total.sample <- 30000 
+burnin <- 100000
+total.sample <- 10000 
 thin <- 1000
 
 # Load data
@@ -107,7 +107,6 @@ post <- run.jags(
     interaction.corr ~ dunif(-1, 1)
     resid.corr ~ dunif(-1, 1)
     
-    
     # ---- construct variance/covariance matrices ----
     for(k in 1:3) {
       sire.vcov[i[k], j[k]] <- sire.corr * sqrt(sire.vcov[i[k], i[k]] * sire.vcov[j[k], j[k]])
@@ -135,7 +134,6 @@ post <- run.jags(
       interaction.eff[int, 1:3] ~ dmnorm.vcov(interaction.mean, interaction.vcov)
     }
     
-    
     # ---- trunk/tail likelihood ----
     for(l in 1:n.larvae) {
       for(t in 1:2) {        
@@ -156,7 +154,6 @@ post <- run.jags(
       length.ppd[l, 1:2] ~ dmnorm.vcov(length.mu[l, ], resid.vcov[1:2, 1:2])
     }
     
-    
     # ---- likelihood of settling ----
     for(s in 1:n.settle) {
       # settling block mean is on logit scale, so must take inverse-logit for bernoulli likelihood
@@ -175,9 +172,7 @@ post <- run.jags(
   }',
   monitor = c(
     'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 
-    'resid.vcov', 'block.mean', 'sire.eff', 'dam.eff', 
-    'interaction.eff', 'mean.overall', 'overall.block.mean',
-    'length.ppd', 'settle.ppd'
+    'resid.vcov', 'overall.block.mean', 'length.ppd', 'settle.ppd'
   ), 
   inits = function() list(
     .RNG.name = 'lecuyer::RngStream',
@@ -198,18 +193,13 @@ elapsed <- swfscMisc::autoUnits(post$timetaken)
 
 # Extract posterior to list of arrays - p
 p <- swfscMisc::runjags2list(post)
-dimnames(p$block.mean)[[2]] <- 
-  dimnames(p$sire.eff)[[2]] <- 
-  dimnames(p$dam.eff)[[2]] <- 
-  dimnames(p$interaction.eff)[[2]] <- 
-  dimnames(p$mean.overall)[[1]] <- 
-  dimnames(p$overall.block.mean)[[2]] <- c('Trunk', 'Tail', 'Settling')
+dimnames(p$overall.block.mean)[[2]] <- c('Trunk', 'Tail', 'Settling')
 dimnames(p$length.ppd)[[2]] <- c('Trunk', 'Tail')
 dimnames(p$sire.vcov)[1:2] <-
   dimnames(p$dam.vcov)[1:2] <-
   dimnames(p$interaction.vcov)[1:2] <-
   dimnames(p$resid.vcov)[1:2] <- 
-  list(dimnames(p$sire.eff)[[2]], dimnames(p$sire.eff)[[2]])
+  list(dimnames(p$overall.block.mean)[[2]], dimnames(p$overall.block.mean)[[2]])
 
 # Hardcode settling resid.vcov off-diag to 0 and diag to 1
 p$resid.vcov['Settling', , ] <- p$resid.vcov[, 'Settling', ] <- 0
@@ -265,8 +255,7 @@ post.smry <- summary(
   post,
   vars = c(
     'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 
-    'resid.vcov', 'block.mean', 'sire.eff', 'dam.eff', 
-    'interaction.eff', 'mean.overall', 'overall.block.mean'
+    'resid.vcov', 'overall.block.mean'
   ) 
 ) |>  
   as.data.frame() |> 
@@ -354,9 +343,7 @@ save.image(format(end, 'Model_outputs/Model_IV_posterior_%Y%m%d_%H%M.rdata'))
 plot(
   post,
   vars = c(
-    'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 
-    'resid.vcov', 'block.mean', 'sire.eff', 'dam.eff', 
-    'interaction.eff', 'mean.overall', 'overall.block.mean'
+    'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 'resid.vcov'
   ),
   file = format(end, 'Model_outputs/Model_IV_plots_%Y%m%d_%H%M.pdf')
 )
