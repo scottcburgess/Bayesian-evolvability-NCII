@@ -1,5 +1,11 @@
 ---
 output: word_document
+knit:
+  (function(inputFile, encoding) {
+    rmarkdown::render(inputFile,
+                      encoding = encoding,
+                      output_dir = "Figures and Tables")
+  })
 ---
 
 ```{r setup, include=FALSE}

@@ -3,23 +3,23 @@ library('tidyverse')
 
 
 # Load data ----
-df_head_tail <- readRDS("1_Data/head_tail_data.rds") 
-df_hatch_settle <- readRDS("1_Data/hatch_settle_data.rds") 
+df_trunk_tail <- readRDS("Data/trunk_tail_data.rds") 
+df_hatch_settle <- readRDS("Data/hatch_settle_data.rds") 
 
 # Prepare data ----
-# Head - Tail
+# trunk - Tail
 # Remove the fixed effects of block, 
 # then calculate residuals, for plotting
-df_head_tail <- df_head_tail |> 
+df_trunk_tail <- df_trunk_tail |> 
   group_by(block) |> 
   reframe(sire = sire,
-          head.resid = head - mean(head, na.rm=T),
+          trunk.resid = trunk - mean(trunk, na.rm=T),
           tail.resid = tail - mean(tail, na.rm=T))
 
 # Calculate the sire averages
-sire_means_head_tail <- df_head_tail |> 
+sire_means_trunk_tail <- df_trunk_tail |> 
   group_by(sire) |> 
-  summarize(mean.head.resid = mean(head.resid),
+  summarize(mean.trunk.resid = mean(trunk.resid),
             mean.tail.resid = mean(tail.resid))
 
 # Hatch - Settle
@@ -38,12 +38,12 @@ family_means_hatch_settle <- family_means_hatch_settle |>
 
 # Make plot ----
 panelA <- ggplot() +
-  geom_point(data = df_head_tail,
-             aes(x = head.resid,
+  geom_point(data = df_trunk_tail,
+             aes(x = trunk.resid,
                  y = tail.resid),
              alpha = 0.1) +
-  # geom_point(data = sire_means_head_tail,
-  #            aes(x = mean.head.resid,
+  # geom_point(data = sire_means_trunk_tail,
+  #            aes(x = mean.trunk.resid,
   #                y = mean.tail.resid),
   #            color="blue",
   #            alpha = 0.6) +
@@ -73,7 +73,7 @@ fig2 <- gridExtra::grid.arrange(panelA,
                                 panelB,
                                 nrow = 1,
                                 ncol = 2)
-ggsave("5_Figure_outputs/Figure 2.pdf", 
+ggsave("Figures and Tables/Figure 2.pdf", 
        plot = fig2, 
        height = 2.5, 
        width = 5)

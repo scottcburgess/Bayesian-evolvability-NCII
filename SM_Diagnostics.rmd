@@ -1,0 +1,164 @@
+---
+title: "Supplemental Materials - Model MCMC Diagnostic Plots"
+output: pdf_document
+knit:
+  (function(inputFile, encoding) {
+    rmarkdown::render(inputFile,
+                      encoding = encoding,
+                      output_dir = "Figures and Tables")
+  })
+---
+
+```{r setup, include=FALSE}
+knitr::opts_chunk$set(
+  echo = FALSE,
+  message = FALSE,
+  warning = FALSE,
+  comment = NA,
+  fig.height = 8,
+  fig.width = 8
+)
+
+rm(list = ls())
+library(tidyverse)
+library(runjags)
+```
+
+For the parameters of interest for each model, we show the posterior trace, histogram, expected cumulative distribution (ECDF), and autocorrelation distribution. Following those are histograms of the autocorrelation (AC.####), potential scale reduction factor (PSRF), and effective sample size (ESS) values for all parameters of interest in the model. Finally for each model, we show the posterior predictive check distribution (PPD) expressed as the distribution of the deviation of the observed values from the PPD values.
+
+\newpage
+
+# Model I
+
+```{r}
+load('Model_outputs/Model_I_posterior_20250923_2343.rdata')
+```
+  
+Number of chains: `r length(post$mcmc)`  
+Burnin: `r post$burnin`  
+Samples per chain: `r post$sample`  
+Total samples: `r post$sample * length(post$mcmc)`  
+  
+```{r}
+ggplot(post.smry) +
+  geom_histogram(aes(values), bins = 20) +
+  facet_wrap(~diag, scales = 'free_x')
+
+ggplot(ppc) +
+  geom_histogram(aes(mean.diff), bins = 50) +
+  facet_wrap(~ metric, scales = 'free_x') +
+  labs(x = 'Length Difference (Observed - PPD)', y = 'Count')
+```
+
+\newpage
+```{r}
+suppressMessages(plot(
+  post, 
+  vars = c(
+    'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 'resid.vcov'
+  )
+))
+```
+
+
+\newpage
+# Model II
+
+```{r}
+load('Model_outputs/Model_II_posterior_20250921_0942.rdata')
+```
+  
+Number of chains: `r length(post$mcmc)`  
+Burnin: `r post$burnin`  
+Samples per chain: `r post$sample`  
+Total samples: `r post$sample * length(post$mcmc)`  
+  
+```{r}
+ggplot(post.smry) +
+  geom_histogram(aes(values), bins = 20) +
+  facet_wrap(~diag, scales = 'free_x')
+
+ggplot(ppc) +
+  geom_histogram(aes(mean.diff), bins = 50) +
+  labs(x = 'Log Ratio Difference (Observed - PPD)', y = 'Count')
+```
+\newpage
+
+```{r}
+suppressMessages(plot(
+  post, 
+  vars = c(
+    'deviance', 'sire.var', 'dam.var', 'interaction.var', 'resid.var',
+    'mean.overall', 'mean.log.ratio.block'
+  )
+))
+```
+
+
+\newpage
+# Model III
+
+```{r}
+load('Model_outputs/Model_III_posterior_20250923_0204.rdata')
+```
+  
+Number of chains: `r length(post$mcmc)`  
+Burnin: `r post$burnin`  
+Samples per chain: `r post$sample`  
+Total samples: `r post$sample * length(post$mcmc)`  
+  
+```{r}
+ggplot(post.smry) +
+  geom_histogram(aes(values), bins = 20) +
+  facet_wrap(~diag, scales = 'free_x')
+
+ggplot(ppc) +
+  geom_histogram(aes(mean.diff), bins = 50) +
+  labs(x = 'Pr(Settling) Difference (Observed - PPD)', y = 'Count')
+```
+\newpage
+
+```{r}
+suppressMessages(plot(
+  post, 
+  vars = c(
+    'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov',
+    'pr.overall', 'pr.block'
+  )
+))
+```
+
+
+\newpage
+# Model IV
+
+```{r}
+load('Model_outputs/Model_IV_posterior_20250924_2208.rdata')
+```
+  
+Number of chains: `r length(post$mcmc)`  
+Burnin: `r post$burnin`  
+Samples per chain: `r post$sample`  
+Total samples: `r post$sample * length(post$mcmc)`  
+  
+```{r}
+ggplot(post.smry) +
+  geom_histogram(aes(values), bins = 20) +
+  facet_wrap(~diag, scales = 'free_x')
+
+ggplot(ppc) +
+  geom_histogram(aes(mean.diff), bins = 50) +
+  facet_wrap(~ metric, scales = 'free') +
+  labs(x = 'Metric Difference (Observed - PPD)', y = 'Count')
+```
+\newpage
+
+```{r}
+suppressMessages(plot(
+  post, 
+  vars = c(
+    'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 
+    'resid.vcov', 'overall.block.mean'
+  )
+))
+```

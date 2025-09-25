@@ -1,11 +1,12 @@
 rm(list=ls())
 library('tidyverse')
+library(ggridges)
 
-source('2_Model_R_scripts/0_misc_funcs.R')
+source('0_misc_funcs.R')
 
 
-# Head Tail: load and prepare ----
-load("3_Model_outputs/Model_I_posterior_20230116_1944.rdata") 
+# Trunk Tail: load and prepare ----
+load("Model_outputs/Model_I_posterior_20250923_2343.rdata") 
 
 # quick check 
 # vecSmry(p$H[1,1,]) # is ~similar to
@@ -14,34 +15,34 @@ load("3_Model_outputs/Model_I_posterior_20230116_1944.rdata")
 
 # Prepare data 
 tmp <- data.frame(
-  HeadVA = p$VA[1,1,] / p$VP[1,1,],
+  TrunkVA = p$VA[1,1,] / p$VP[1,1,],
   TailVA = p$VA[2,2,] / p$VP[2,2,],
-  HeadVM = p$VM[1,1,] / p$VP[1,1,],
+  TrunkVM = p$VM[1,1,] / p$VP[1,1,],
   TailVM = p$VM[2,2,] / p$VP[2,2,],
-  HeadVD = p$VD[1,1,] / p$VP[1,1,],
+  TrunkVD = p$VD[1,1,] / p$VP[1,1,],
   TailVD = p$VD[2,2,] / p$VP[2,2,],
   # Residual = VP - (VA + VM + VD)
-  HeadVR = (p$VP[1,1,] - (p$VA[1,1,] + p$VM[1,1,] + p$VD[1,1,])) / p$VP[1,1,],
+  TrunkVR = (p$VP[1,1,] - (p$VA[1,1,] + p$VM[1,1,] + p$VD[1,1,])) / p$VP[1,1,],
   TailVR = (p$VP[2,2,] - (p$VA[2,2,] + p$VM[2,2,] + p$VD[2,2,])) / p$VP[2,2,]
   )
 
-d_headtail <- tmp |> 
+d_Trunktail <- tmp |> 
   pivot_longer(cols = everything(), cols_vary = 'slowest') |> 
   as.data.frame()
 
 
 
 
-# Head Tail ratio: load and prepare ----
-load("3_Model_outputs/Model_II_posterior_20230117_0903.rdata") 
+# Trunk Tail ratio: load and prepare ----
+load("Model_outputs/Model_II_posterior_20250921_0942.rdata") 
 
 ## Prepare data
 tmp <- data.frame(
-  ratioVA = vcv.obs$VA$var.a.obs / vcv.obs$VA$var.obs,
-  ratioVM = vcv.obs$VM$var.a.obs / vcv.obs$VM$var.obs,
-  ratioVD = vcv.obs$VD$var.a.obs / vcv.obs$VD$var.obs)
+  ratioVA = var.obs$VA$var.a.obs / var.obs$VA$var.obs,
+  ratioVM = var.obs$VM$var.a.obs / var.obs$VM$var.obs,
+  ratioVD = var.obs$VD$var.a.obs / var.obs$VD$var.obs)
 
-d_headtail_ratio <- tmp |> 
+d_Trunktail_ratio <- tmp |> 
   pivot_longer(cols = everything(), cols_vary = 'slowest') |> 
   as.data.frame()
 
@@ -49,7 +50,7 @@ d_headtail_ratio <- tmp |>
 
 
 # Hatching Settling : load and prepare ----
-load("3_Model_outputs/Model_III_posterior_20230119_1741.rdata") 
+load("Model_outputs/Model_III_posterior_20250923_0204.rdata") 
 
 # quick check for hatching
 # vecSmry(p$H[1,]) # is ~similar to
@@ -94,9 +95,9 @@ bw <- 0.005
 sc <- 0.9
 
 ## Panel A ----
-names_to_use <- c("HeadVA", "HeadVM", "HeadVD", "HeadVR")
+names_to_use <- c("TrunkVA", "TrunkVM", "TrunkVD", "TrunkVR")
 
-d <- d_headtail |>
+d <- d_Trunktail |>
   filter(name %in% names_to_use) |> 
   mutate(name = factor(name, levels = rev(names_to_use)))
 
@@ -139,23 +140,23 @@ panelA <- ggplot(d,
                size = segment_size) +
   scale_x_continuous(breaks = brks,
                      limits = lmts) +
-  scale_fill_manual(values = c("HeadVA" = vc_color[4,], 
-                               "HeadVM" = vc_color[3,],
-                               "HeadVD" = vc_color[2,],
-                               "HeadVR" = vc_color[1,])) +
-  scale_y_discrete(labels = c("HeadVA" = expression(V[A]), 
-                              "HeadVM" = expression(V[M]),
-                              "HeadVD" = expression(V[D]),
-                              "HeadVR" = expression(V[R]))) + 
-  scale_color_manual(values = c("HeadVA" = vc_color[4,], 
-                                "HeadVM" = vc_color[3,],
-                                "HeadVD" = vc_color[2,],
-                                "HeadVR" = vc_color[1,]))
+  scale_fill_manual(values = c("TrunkVA" = vc_color[4,], 
+                               "TrunkVM" = vc_color[3,],
+                               "TrunkVD" = vc_color[2,],
+                               "TrunkVR" = vc_color[1,])) +
+  scale_y_discrete(labels = c("TrunkVA" = expression(V[A]), 
+                              "TrunkVM" = expression(V[M]),
+                              "TrunkVD" = expression(V[D]),
+                              "TrunkVR" = expression(V[R]))) + 
+  scale_color_manual(values = c("TrunkVA" = vc_color[4,], 
+                                "TrunkVM" = vc_color[3,],
+                                "TrunkVD" = vc_color[2,],
+                                "TrunkVR" = vc_color[1,]))
 
 ## Panel B ----
 names_to_use <- c("TailVA", "TailVM", "TailVD", "TailVR")
 
-d <- d_headtail |>
+d <- d_Trunktail |>
   filter(name %in% names_to_use) |> 
   mutate(name = factor(name, levels = rev(names_to_use)))
 
@@ -218,7 +219,7 @@ scale_fill_manual(values = c("TailVA" = vc_color[4,],
 ## Panel C ----
 names_to_use <- c("ratioVA", "ratioVM", "ratioVD")
 
-d <- d_headtail_ratio |>
+d <- d_Trunktail_ratio |>
   filter(name %in% names_to_use) |> 
   mutate(name = factor(name, levels = rev(names_to_use)))
 
@@ -395,7 +396,7 @@ fig3 <- gridExtra::grid.arrange(panelA,
                                 panelE,
                         nrow = 2,
                         ncol = 3)
-ggsave("5_Figure_outputs/Figure 3.pdf", 
+ggsave("Figures and Tables/Figure 3.pdf", 
        plot = fig3, 
        height = 4, 
        width = 8)
@@ -404,21 +405,21 @@ dev.off()
 
 
 # Summaries ----
-tmp <- d_headtail |> filter(name=="HeadVA") |> select("value")
-round(vecSmry(tmp$value),4) # Head VA (proportion)
-tmp <- d_headtail |> filter(name=="HeadVM") |> select("value")
-round(vecSmry(tmp$value),4) # Head VM (proportion)
-tmp <- d_headtail |> filter(name=="HeadVD") |> select("value")
-round(vecSmry(tmp$value),4) # Head VM (proportion)
+tmp <- d_Trunktail |> filter(name=="TrunkVA") |> select("value")
+round(vecSmry(tmp$value),4) # Trunk VA (proportion)
+tmp <- d_Trunktail |> filter(name=="TrunkVM") |> select("value")
+round(vecSmry(tmp$value),4) # Trunk VM (proportion)
+tmp <- d_Trunktail |> filter(name=="TrunkVD") |> select("value")
+round(vecSmry(tmp$value),4) # Trunk VM (proportion)
 
 
 
-tmp <- d_headtail |> filter(name=="TailVA") |> select("value")
-round(vecSmry(tmp$value),4) # Head VA (proportion)
-tmp <- d_headtail |> filter(name=="TailVM") |> select("value")
-round(vecSmry(tmp$value),4) # Head VM (proportion)
-tmp <- d_headtail |> filter(name=="TailVD") |> select("value")
-round(vecSmry(tmp$value),4) # Head VM (proportion)
+tmp <- d_Trunktail |> filter(name=="TailVA") |> select("value")
+round(vecSmry(tmp$value),4) # Trunk VA (proportion)
+tmp <- d_Trunktail |> filter(name=="TailVM") |> select("value")
+round(vecSmry(tmp$value),4) # Trunk VM (proportion)
+tmp <- d_Trunktail |> filter(name=="TailVD") |> select("value")
+round(vecSmry(tmp$value),4) # Trunk VM (proportion)
 
 
 tmp <- d_hatchsettle |> filter(name=="HatchVA") |> select("value")

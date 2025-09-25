@@ -1,36 +1,36 @@
 rm(list=ls())
 library('tidyverse')
 # library('ggridges')
-source('2_Model_R_scripts/0_misc_funcs.R')
+source('0_misc_funcs.R')
 
 options(scipen = 999)
 
 
-# Head Tail: load and prepare ----
-load("3_Model_outputs/Model_I_posterior_20230116_1944.rdata") 
+# trunk Tail: load and prepare ----
+load("Model_outputs/Model_I_posterior_20250923_2343.rdata") 
 
 # Prepare data 
 # Get the posterior samples by averaging across all of the random beta's
-eB_posterior_head_tail <- apply(e.params_BetaMCMC$post.dist$eB, 1, mean)
-rB_posterior_head_tail <- apply(e.params_BetaMCMC$post.dist$rB, 1, mean)
-cB_posterior_head_tail <- apply(e.params_BetaMCMC$post.dist$cB, 1, mean)
+eB_posterior_trunk_tail <- apply(e.params_BetaMCMC$post.dist$eB, 1, mean)
+rB_posterior_trunk_tail <- apply(e.params_BetaMCMC$post.dist$rB, 1, mean)
+cB_posterior_trunk_tail <- apply(e.params_BetaMCMC$post.dist$cB, 1, mean)
 # Check
 # e.params_BetaMCMC$summary # median (called e_mean) should be the same as
-# vecSmry(eB_posterior_head_tail) # median here (but we're using the mode)
+# vecSmry(eB_posterior_trunk_tail) # median here (but we're using the mode)
 
-E_head_tail <- data.frame(name = c(rep("eB",length(eB_posterior_head_tail)),
-                                      rep("rB",length(rB_posterior_head_tail)),
-                                      rep("cB",length(cB_posterior_head_tail))),
-                             value = c(eB_posterior_head_tail,
-                                       rB_posterior_head_tail,
-                                       cB_posterior_head_tail))
+E_trunk_tail <- data.frame(name = c(rep("eB",length(eB_posterior_trunk_tail)),
+                                      rep("rB",length(rB_posterior_trunk_tail)),
+                                      rep("cB",length(cB_posterior_trunk_tail))),
+                             value = c(eB_posterior_trunk_tail,
+                                       rB_posterior_trunk_tail,
+                                       cB_posterior_trunk_tail))
 
-E_head_tail <- E_head_tail |> 
+E_trunk_tail <- E_trunk_tail |> 
   mutate(name = factor(name, levels = c("eB","rB","cB")))
 
 
 # Hatching Settling : load and prepare ----
-load("3_Model_outputs/Model_III_posterior_20230119_1741.rdata") 
+load("Model_outputs/Model_III_posterior_20250923_0204.rdata") 
 
 ## Prepare data 
 eB_posterior_hatch_settle <- apply(e.params_BetaMCMC$post.dist$eB, 1, mean)
@@ -77,13 +77,13 @@ bw2 <- 0.001
 sc <- 0.9
 
 ## Panel A ----
-summaries <- E_head_tail |>
+summaries <- E_trunk_tail |>
   group_by(name) |>
   summarise(summary_values = list(vecSmry(value)), .groups = 'drop') |>
   unnest_wider(summary_values, names_repair = "unique")
 
 
-panelA <- ggplot(E_head_tail, 
+panelA <- ggplot(E_trunk_tail, 
                  aes(x = value, y = name, fill = name)) +
   geom_density_ridges(scale = sc,
                       alpha = alp,
@@ -183,7 +183,7 @@ fig4 <- gridExtra::grid.arrange(panelA,
                                 panelB,
                         nrow = 1,
                         ncol = 2)
-ggsave("5_Figure_outputs/Figure 4.pdf", 
+ggsave("Figures and Tables/Figure 4.pdf", 
        plot = fig4, 
        height = 2, 
        width = 5)
@@ -193,7 +193,7 @@ dev.off()
 
 # Summaries ----
 tmp <- E_hatch_settle |> filter(name=="eB") |> select("value")
-round(vecSmry(tmp$value),4) # Head VA (proportion)
+round(vecSmry(tmp$value),4) # trunk VA (proportion)
 
-tmp <- E_head_tail |> filter(name=="eB") |> select("value")
+tmp <- E_trunk_tail |> filter(name=="eB") |> select("value")
 round(vecSmry(tmp$value),6) # Tail VA (proportion)
