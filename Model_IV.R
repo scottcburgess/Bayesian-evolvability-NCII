@@ -172,7 +172,7 @@ post <- run.jags(
   }',
   monitor = c(
     'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 
-    'resid.vcov', 'overall.block.mean', 'length.ppd', 'settle.ppd'
+    'resid.vcov', 'overall.block.mean', 'mean.overall','length.ppd', 'settle.ppd'
   ), 
   inits = function() list(
     .RNG.name = 'lecuyer::RngStream',
