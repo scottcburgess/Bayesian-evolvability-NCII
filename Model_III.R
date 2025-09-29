@@ -3,11 +3,11 @@ library(tidyverse)
 library(runjags)
 
 # MCMC parameters
-chains <- 10
+chains <- 50
 adapt <- 100
 burnin <- 80000
-total.sample <- 50000
-thin <- 10000
+total.sample <- 8000
+thin <- 20000
 
 # Load data
 df <- readRDS('Data/hatch_settle_data.rds') 

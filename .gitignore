@@ -8,6 +8,6 @@
 *.rdata
 *.html
 Model_outputs/*.pdf
-_devel/
 Manuscript/
 old/
+_extra/

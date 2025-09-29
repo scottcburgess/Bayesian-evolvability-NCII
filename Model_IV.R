@@ -3,11 +3,11 @@ library(tidyverse)
 library(runjags)
 
 # MCMC parameters
-chains <- 10
+chains <- 50
 adapt <- 100
 burnin <- 100000
-total.sample <- 10000 
-thin <- 1000
+total.sample <- 8000 
+thin <- 5000
 
 # Load data
 trunk_tail.df <- readRDS('Data/trunk_tail_data.rds') 
@@ -172,7 +172,8 @@ post <- run.jags(
   }',
   monitor = c(
     'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 
-    'resid.vcov', 'overall.block.mean', 'mean.overall','length.ppd', 'settle.ppd'
+    'resid.vcov', 'overall.block.mean', 'mean.overall', 
+    'length.ppd', 'settle.ppd'
   ), 
   inits = function() list(
     .RNG.name = 'lecuyer::RngStream',
@@ -254,8 +255,7 @@ vcv.obs <- convertVCVscale(p)
 post.smry <- summary(
   post,
   vars = c(
-    'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 
-    'resid.vcov', 'overall.block.mean'
+    'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 'resid.vcov'
   ) 
 ) |>  
   as.data.frame() |> 
