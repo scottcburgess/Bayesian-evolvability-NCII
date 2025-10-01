@@ -74,7 +74,7 @@ suppressMessages(plot(
 # Model II
 
 ```{r}
-load('Model_outputs/Model_II_posterior_20250929_1126.rdata')
+load('Model_outputs/Model_II_posterior_20251001_1520.rdata')
 ```
   
 Number of chains: `r length(post$mcmc)`  
