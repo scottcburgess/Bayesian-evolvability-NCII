@@ -32,7 +32,7 @@ For each model, we show histograms of the autocorrelation (AC.####), potential s
 # Model I
 
 ```{r}
-load('Model_outputs/Model_I_posterior_20250923_2343.rdata')
+load('Model_outputs/Model_I_posterior_20250930_0019.rdata')
 ```
   
 Number of chains: `r length(post$mcmc)`  
@@ -40,20 +40,21 @@ Burnin: `r post$burnin`
 Samples per chain: `r post$sample`  
 Total samples: `r post$sample * length(post$mcmc)`  
   
-  
+### A) Posterior distribution diagnostics
 ```{r}
 ggplot(post.smry) +
   geom_histogram(aes(values), bins = 20) +
-  facet_wrap(~diag, scales = 'free_x') +
-  ggtitle('A) Posterior distribution diagnostics')
+  facet_wrap(~diag, scales = 'free_x')
+```
 
+### B) Posterior predictive check distribution
+```{r}
 ggplot(ppc) +
   geom_histogram(aes(mean.diff), bins = 50) +
   facet_wrap(~ metric, scales = 'free_x') +
   labs(
     x = 'Length Difference (Observed - PPD)', 
-    y = 'Count',
-    title = 'B) Posterior predictive check distribution'
+    y = 'Count'
   )
 ```
 
@@ -73,7 +74,7 @@ suppressMessages(plot(
 # Model II
 
 ```{r}
-load('Model_outputs/Model_II_posterior_20250921_0942.rdata')
+load('Model_outputs/Model_II_posterior_20250929_1126.rdata')
 ```
   
 Number of chains: `r length(post$mcmc)`  
@@ -81,19 +82,20 @@ Burnin: `r post$burnin`
 Samples per chain: `r post$sample`  
 Total samples: `r post$sample * length(post$mcmc)`  
   
-  
+### A) Posterior distribution diagnostics
 ```{r}
 ggplot(post.smry) +
   geom_histogram(aes(values), bins = 20) +
-  facet_wrap(~diag, scales = 'free_x') +
-  ggtitle('A) Posterior distribution diagnostics')
+  facet_wrap(~diag, scales = 'free_x') 
+```
 
+### B) Posterior predictive check distribution
+```{r}
 ggplot(ppc) +
   geom_histogram(aes(mean.diff), bins = 50) +
   labs(
     x = 'Log Ratio Difference (Observed - PPD)', 
-    y = 'Count',
-    title = 'B) Posterior predictive check distribution'
+    y = 'Count'
   )
 ```
 
@@ -114,7 +116,7 @@ suppressMessages(plot(
 # Model III
 
 ```{r}
-load('Model_outputs/Model_III_posterior_20250928_1512.rdata')
+load('Model_outputs/Model_III_posterior_20250930_1554.rdata')
 ```
   
 Number of chains: `r length(post$mcmc)`  
@@ -122,19 +124,20 @@ Burnin: `r post$burnin`
 Samples per chain: `r post$sample`  
 Total samples: `r post$sample * length(post$mcmc)`  
   
-  
+### A) Posterior distribution diagnostics
 ```{r}
 ggplot(post.smry) +
   geom_histogram(aes(values), bins = 20) +
-  facet_wrap(~diag, scales = 'free_x') +
-  ggtitle('A) Posterior distribution diagnostics')
+  facet_wrap(~diag, scales = 'free_x') 
+```
 
+### B) Posterior predictive check distribution
+```{r}
 ggplot(ppc) +
   geom_histogram(aes(mean.diff), bins = 50) +
   labs(
     x = 'Pr(Settling) Difference (Observed - PPD)', 
-    y = 'Count',
-    title = 'B) Posterior predictive check distribution'
+    y = 'Count'
   )
 ```
 
@@ -145,7 +148,7 @@ suppressMessages(plot(
   post, 
   vars = c(
     'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov',
-    'pr.overall', 'pr.block'
+    'pr.overall'
   )
 ))
 ```
@@ -155,7 +158,7 @@ suppressMessages(plot(
 # Model IV
 
 ```{r}
-load('Model_outputs/Model_IV_posterior_20250924_2208.rdata')
+load('Model_outputs/Model_IV_posterior_20251001_0640.rdata')
 ```
   
 Number of chains: `r length(post$mcmc)`  
@@ -163,19 +166,22 @@ Burnin: `r post$burnin`
 Samples per chain: `r post$sample`  
 Total samples: `r post$sample * length(post$mcmc)`  
   
+### A) Posterior distribution diagnostics
 ```{r}
 ggplot(post.smry) +
   geom_histogram(aes(values), bins = 20) +
-  facet_wrap(~diag, scales = 'free_x') +
-  ggtitle('A) Posterior distribution diagnostics')
+  facet_wrap(~diag, scales = 'free_x')
+```
 
+### B) Posterior predictive check distribution
+```{r}
 ggplot(ppc) +
   geom_histogram(aes(mean.diff), bins = 50) +
   facet_wrap(~ metric, scales = 'free') +
   labs(
     x = 'Metric Difference (Observed - PPD)', 
     y = 'Count',
-    title = 'B) Posterior predictive check distribution'
+    title = ''
   )
 ```
 
@@ -186,7 +192,7 @@ suppressMessages(plot(
   post, 
   vars = c(
     'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 
-    'resid.vcov', 'overall.block.mean'
+    'resid.vcov'
   )
 ))
 ```
