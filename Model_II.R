@@ -86,8 +86,7 @@ post <- run.jags(
   }',
   monitor = c(
     'deviance', 'sire.var', 'dam.var', 'interaction.var', 'resid.var',
-    'mean.overall', 'mean.log.ratio.block', 'log.ratio.ppd',
-    'sire.mean', 'dam.mean', 'interaction.mean', 'var.overall'
+    'mean.overall', 'mean.log.ratio.block', 'log.ratio.ppd'
   ), 
   inits = function() list(
     .RNG.name = 'lecuyer::RngStream',
@@ -145,8 +144,7 @@ post.smry <- summary(
   post,
   vars = c(
     'deviance', 'sire.var', 'dam.var', 'interaction.var', 'resid.var',
-    'mean.overall', 'mean.log.ratio.block', 'sire.mean', 'dam.mean', 'interaction.mean',
-    'var.overall'
+    'mean.overall', 'mean.log.ratio.block'
   ) 
 ) |>  
   as.data.frame() |> 
@@ -201,8 +199,7 @@ plot(
   post, 
   vars = c(
     'deviance', 'sire.var', 'dam.var', 'interaction.var', 'resid.var',
-    'mean.overall', 'mean.log.ratio.block', 'sire.mean', 'dam.mean', 'interaction.mean',
-    'var.overall'
+    'mean.overall', 'mean.log.ratio.block'
   ),
   file = format(end, 'Model_outputs/Model_II_plots_%Y%m%d_%H%M.pdf')
 )
