@@ -49,10 +49,10 @@ post <- run.jags(
     interaction.mean ~ dnorm(0, 1e-3)
       
     # ---- variance priors ----
-    sire.var ~ dunif(0, 1e4)
-    dam.var ~ dunif(0, 1e4)
-    interaction.var ~ dunif(0, 1e4)
-    resid.var ~ dunif(0, 1e4)
+    sire.var ~ dunif(0, 1e2)
+    dam.var ~ dunif(0, 1e2)
+    interaction.var ~ dunif(0, 1e2)
+    resid.var ~ dunif(0, 1e2)
   
     # ---- sire priors ----
     for(s in 1:n.sires) {
@@ -61,7 +61,7 @@ post <- run.jags(
     
     # ---- dam priors ----
     for(d in 1:n.dams) {
-      dam.eff[d] ~ dmnorm.vcov(dam.mean, 1 / dam.var)
+      dam.eff[d] ~ dnorm(dam.mean, 1 / dam.var)
     }
     
     # ---- interaction priors ----
