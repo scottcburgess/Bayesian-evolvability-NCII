@@ -20,7 +20,7 @@ options(scipen = 10, digits = 3)
 rm(list = ls())
 library(tidyverse)
 library(runjags)
-load("Model_IV_posterior_20250924_2208.rdata")
+load("Model_IV_posterior_20251001_0640.rdata")
 source("../0_misc_funcs.R")
 ```
 
@@ -107,8 +107,8 @@ plot.metric(beta[2,])
 Predicts the % change in trunk and tail length per generation (assuming fitness is settlement)   
 ```{r}
 # Extract means for convenience
-mean_trunk <- p$mean.overall["Trunk",]
-mean_tail  <- p$mean.overall["Tail",]
+mean_trunk <- p$mean.overall[1,]
+mean_tail  <- p$mean.overall[2,]
 
 # Extract variances and covariance
 VA11 <- p$VA[1,1,]  # Var(Trunk)
