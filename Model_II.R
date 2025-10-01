@@ -33,7 +33,7 @@ post <- run.jags(
   model = 'model {
     # ---- overall mean ----
     mean.overall ~ dunif(log.ratio.range[1], log.ratio.range[2])
-    var.overall ~ dunif(0, 1e5)
+    var.overall ~ dunif(0, 1)
     
     # ---- priors for effect means ----
     for(b in 1:n.blocks) {
@@ -42,17 +42,17 @@ post <- run.jags(
       
       # prior of mean and variance of log ratio in each block for computing heritability
       mean.log.ratio.block[b] ~ dunif(log.ratio.range[1], log.ratio.range[2])
-      var.log.ratio.block[b] ~ dunif(0, 1e3)
+      var.log.ratio.block[b] ~ dunif(0, 1)
     }
-    sire.mean ~ dnorm(0, 1e-3)
-    dam.mean ~ dnorm(0, 1e-3)
-    interaction.mean ~ dnorm(0, 1e-3)
+    sire.mean ~ dnorm(0, 1e-1)
+    dam.mean ~ dnorm(0, 1e-1)
+    interaction.mean ~ dnorm(0, 1e-1)
       
     # ---- variance priors ----
-    sire.var ~ dunif(0, 1e2)
-    dam.var ~ dunif(0, 1e2)
-    interaction.var ~ dunif(0, 1e2)
-    resid.var ~ dunif(0, 1e2)
+    sire.var ~ dunif(0, 1)
+    dam.var ~ dunif(0, 1)
+    interaction.var ~ dunif(0, 1)
+    resid.var ~ dunif(0, 1)
   
     # ---- sire priors ----
     for(s in 1:n.sires) {
@@ -86,7 +86,8 @@ post <- run.jags(
   }',
   monitor = c(
     'deviance', 'sire.var', 'dam.var', 'interaction.var', 'resid.var',
-    'mean.overall', 'mean.log.ratio.block', 'log.ratio.ppd'
+    'mean.overall', 'mean.log.ratio.block', 'log.ratio.ppd',
+    'sire.mean', 'dam.mean', 'interaction.mean', 'var.overall'
   ), 
   inits = function() list(
     .RNG.name = 'lecuyer::RngStream',
@@ -144,7 +145,8 @@ post.smry <- summary(
   post,
   vars = c(
     'deviance', 'sire.var', 'dam.var', 'interaction.var', 'resid.var',
-    'mean.overall', 'mean.log.ratio.block'
+    'mean.overall', 'mean.log.ratio.block', 'sire.mean', 'dam.mean', 'interaction.mean',
+    'var.overall'
   ) 
 ) |>  
   as.data.frame() |> 
@@ -199,7 +201,8 @@ plot(
   post, 
   vars = c(
     'deviance', 'sire.var', 'dam.var', 'interaction.var', 'resid.var',
-    'mean.overall', 'mean.log.ratio.block'
+    'mean.overall', 'mean.log.ratio.block', 'sire.mean', 'dam.mean', 'interaction.mean',
+    'var.overall'
   ),
   file = format(end, 'Model_outputs/Model_II_plots_%Y%m%d_%H%M.pdf')
 )
