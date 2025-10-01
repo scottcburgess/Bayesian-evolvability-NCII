@@ -4,6 +4,12 @@ output:
   html_document:
     toc: yes
     toc_float: yes
+knit:
+  (function(inputFile, encoding) {
+    rmarkdown::render(inputFile,
+                      encoding = encoding,
+                      output_dir = "Figures and Tables")
+  })
 ---
 
 ```{r setup, include=FALSE}
@@ -20,8 +26,8 @@ options(scipen = 10, digits = 3)
 rm(list = ls())
 library(tidyverse)
 library(runjags)
-load("Model_IV_posterior_20251001_0640.rdata")
-source("../0_misc_funcs.R")
+source("0_misc_funcs.R")
+load("Model_outputs/Model_IV_posterior_20251001_0640.rdata")
 ```
 
 ## Run Summary
