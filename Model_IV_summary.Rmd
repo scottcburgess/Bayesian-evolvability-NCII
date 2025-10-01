@@ -76,7 +76,10 @@ Trunk selection differential
 cov_trunk_p <- vcv.obs$vcv.G.obs[1,3,]
 mean_p <- vcv.obs$mean.obs[, "Settling"]
 cov_trunk_p_relative <- cov_trunk_p / mean_p # selection differential
-vecSmry(cov_trunk_p_relative)
+c(
+  vecSmry(cov_trunk_p_relative),
+  pr.gt.0 = mean(cov_trunk_p_relative > 0)
+)
 plot.metric(cov_trunk_p_relative)
 ```
 
@@ -85,7 +88,10 @@ Tail selection differential
 cov_tail_p <- vcv.obs$vcv.G.obs[2,3,]
 mean_p <- vcv.obs$mean.obs[, "Settling"]
 cov_tail_p_relative <- cov_tail_p / mean_p # selection differential
-vecSmry(cov_tail_p_relative)
+c(
+  vecSmry(cov_tail_p_relative),
+  pr.gt.0 = mean(cov_tail_p_relative > 0)
+)
 plot.metric(cov_tail_p_relative)
 ```
 
@@ -104,7 +110,13 @@ for (i in seq_len(n_iter)) {
   beta[, i] <- solve(G) %*% S_vec
 }
 
-comp.smry(beta)
+beta |> 
+  apply(1, function(x) {
+    c(vecSmry(x), pr.gt.0 = mean(x > 0))
+  }) |> 
+  t() |> 
+  as.data.frame() |> 
+  pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
 plot.metric(beta[1,])
 plot.metric(beta[2,])
 ```
@@ -127,21 +139,41 @@ E_matrix <- rbind(
   Tail  = (VA22 / mean_tail^2)  * beta[2, ] + (VA12 / (mean_trunk * mean_tail)) * beta[1, ]
 )
 
-comp.smry(E_matrix * 100)
+(E_matrix * 100) |> 
+  apply(1, function(x) {
+    c(vecSmry(x), pr.gt.0 = mean(x > 0))
+  }) |> 
+  t() |> 
+  as.data.frame() |> 
+  pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
 ```
 
 Trunk  
 ```{r}
-plot.metric(E_matrix['Trunk',] * 100) # needs more bins in geom_histogram()
+(E_matrix['Trunk', ] * 100) |> 
+  enframe() |>
+  ggplot(aes(value)) +
+  geom_histogram(bins = 200) +
+  labs(x = "Trunk Evolvability", y = "Count")
 ```
 
 Tail  
 ```{r}
-plot.metric(E_matrix['Tail',] * 100) # needs more bins in geom_histogram()
+(E_matrix['Tail', ] * 100) |> 
+  enframe() |>
+  ggplot(aes(value)) +
+  geom_histogram(bins = 200) +
+  labs(x = "Tail Evolvability", y = "Count")# needs more bins in geom_histogram()
 ```
 
 Tail evolvability / Trunk evolvability
 ```{r}
-vecSmry(E_matrix['Tail',] / E_matrix['Trunk',])
-plot.metric(E_matrix['Tail',] / E_matrix['Trunk',]) # needs more bins in geom_histogram()
+e.ratio <- E_matrix['Tail', ] / E_matrix['Trunk', ]
+c(vecSmry(e.ratio), pr.gt.1 = mean(e.ratio > 1))
+e.ratio |> 
+  enframe() |>
+  ggplot(aes(value)) +
+  geom_histogram(bins = 200) +
+  labs(x = "Tail Evolvability / Trunk Evolvability", y = "Count")
 ```
+

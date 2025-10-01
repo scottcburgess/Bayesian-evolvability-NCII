@@ -33,7 +33,7 @@ post <- run.jags(
   model = 'model {
     # ---- overall mean ----
     mean.overall ~ dunif(log.ratio.range[1], log.ratio.range[2])
-    var.overall ~ dunif(0, 1e5)
+    var.overall ~ dunif(0, 1)
     
     # ---- priors for effect means ----
     for(b in 1:n.blocks) {
@@ -42,17 +42,17 @@ post <- run.jags(
       
       # prior of mean and variance of log ratio in each block for computing heritability
       mean.log.ratio.block[b] ~ dunif(log.ratio.range[1], log.ratio.range[2])
-      var.log.ratio.block[b] ~ dunif(0, 1e3)
+      var.log.ratio.block[b] ~ dunif(0, 1)
     }
-    sire.mean ~ dnorm(0, 1e-3)
-    dam.mean ~ dnorm(0, 1e-3)
-    interaction.mean ~ dnorm(0, 1e-3)
+    sire.mean ~ dnorm(0, 1e-1)
+    dam.mean ~ dnorm(0, 1e-1)
+    interaction.mean ~ dnorm(0, 1e-1)
       
     # ---- variance priors ----
-    sire.var ~ dunif(0, 1e2)
-    dam.var ~ dunif(0, 1e2)
-    interaction.var ~ dunif(0, 1e2)
-    resid.var ~ dunif(0, 1e2)
+    sire.var ~ dunif(0, 1)
+    dam.var ~ dunif(0, 1)
+    interaction.var ~ dunif(0, 1)
+    resid.var ~ dunif(0, 1)
   
     # ---- sire priors ----
     for(s in 1:n.sires) {
