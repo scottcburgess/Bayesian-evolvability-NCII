@@ -1,12 +1,13 @@
 rm(list=ls())
 library('tidyverse')
-library(ggridges)
+library('ggridges')
 
 source('0_misc_funcs.R')
 
 
 # Trunk Tail: load and prepare ----
-load("Model_outputs/Model_I_posterior_20250923_2343.rdata") 
+Data1 <- new.env()
+load("Model_outputs/Model_I_posterior_20250930_0019.rdata", envir = Data1) 
 
 # quick check 
 # vecSmry(p$H[1,1,]) # is ~similar to
@@ -15,15 +16,14 @@ load("Model_outputs/Model_I_posterior_20250923_2343.rdata")
 
 # Prepare data 
 tmp <- data.frame(
-  TrunkVA = p$VA[1,1,] / p$VP[1,1,],
-  TailVA = p$VA[2,2,] / p$VP[2,2,],
-  TrunkVM = p$VM[1,1,] / p$VP[1,1,],
-  TailVM = p$VM[2,2,] / p$VP[2,2,],
-  TrunkVD = p$VD[1,1,] / p$VP[1,1,],
-  TailVD = p$VD[2,2,] / p$VP[2,2,],
-  # Residual = VP - (VA + VM + VD)
-  TrunkVR = (p$VP[1,1,] - (p$VA[1,1,] + p$VM[1,1,] + p$VD[1,1,])) / p$VP[1,1,],
-  TailVR = (p$VP[2,2,] - (p$VA[2,2,] + p$VM[2,2,] + p$VD[2,2,])) / p$VP[2,2,]
+  TrunkVA = Data1$p$VA[1,1,] / Data1$p$VP[1,1,],
+  TailVA = Data1$p$VA[2,2,] / Data1$p$VP[2,2,],
+  TrunkVM = Data1$p$VM[1,1,] / Data1$p$VP[1,1,],
+  TailVM = Data1$p$VM[2,2,] / Data1$p$VP[2,2,],
+  TrunkVD = Data1$p$VD[1,1,] / Data1$p$VP[1,1,],
+  TailVD = Data1$p$VD[2,2,] / Data1$p$VP[2,2,],
+  TrunkVR = Data1$p$resid.vcov[1,1,] / Data1$p$VP[1,1,],
+  TailVR = Data1$p$resid.vcov[2,2,]/ Data1$p$VP[2,2,]
   )
 
 d_Trunktail <- tmp |> 
@@ -31,16 +31,16 @@ d_Trunktail <- tmp |>
   as.data.frame()
 
 
-
-
 # Trunk Tail ratio: load and prepare ----
-load("Model_outputs/Model_II_posterior_20250921_0942.rdata") 
+Data2 <- new.env()
+load("Model_outputs/Model_II_posterior_20251001_1520.rdata", envir = Data2)
 
 ## Prepare data
 tmp <- data.frame(
-  ratioVA = var.obs$VA$var.a.obs / var.obs$VA$var.obs,
-  ratioVM = var.obs$VM$var.a.obs / var.obs$VM$var.obs,
-  ratioVD = var.obs$VD$var.a.obs / var.obs$VD$var.obs)
+  ratioVA = Data2$var.obs$VA$var.a.obs / Data2$var.obs$VA$var.obs,
+  ratioVM = Data2$var.obs$VM$var.a.obs / Data2$var.obs$VM$var.obs,
+  ratioVD = Data2$var.obs$VD$var.a.obs / Data2$var.obs$VD$var.obs,
+  ratioVR = Data2$var.obs$VR$var.a.obs / Data2$var.obs$VR$var.obs)
 
 d_Trunktail_ratio <- tmp |> 
   pivot_longer(cols = everything(), cols_vary = 'slowest') |> 
@@ -48,9 +48,9 @@ d_Trunktail_ratio <- tmp |>
 
 
 
-
 # Hatching Settling : load and prepare ----
-load("Model_outputs/Model_III_posterior_20250923_0204.rdata") 
+Data3 <- new.env()
+load("Model_outputs/Model_III_posterior_20250930_1554.rdata", envir = Data3) 
 
 # quick check for hatching
 # vecSmry(p$H[1,]) # is ~similar to
@@ -58,14 +58,13 @@ load("Model_outputs/Model_III_posterior_20250923_0204.rdata")
 
 ## Prepare data 
 tmp <- data.frame(
-  HatchVA = vcv.obs$VA$vcv.G.obs[1,1,] / vcv.obs$VA$vcv.P.obs[1,1,],
-  SettleVA = vcv.obs$VA$vcv.G.obs[2,2,] / vcv.obs$VA$vcv.P.obs[2,2,],
-  HatchVM = vcv.obs$VM$vcv.G.obs[1,1,] / vcv.obs$VM$vcv.P.obs[1,1,],
-  SettleVM = vcv.obs$VM$vcv.G.obs[2,2,] / vcv.obs$VM$vcv.P.obs[2,2,],
-  HatchVD = vcv.obs$VD$vcv.G.obs[1,1,] / vcv.obs$VD$vcv.P.obs[1,1,],
-  SettleVD = vcv.obs$VD$vcv.G.obs[2,2,] / vcv.obs$VD$vcv.P.obs[2,2,]
+  HatchVA = Data3$vcv.obs$VA$vcv.G.obs[1,1,] / Data3$vcv.obs$VA$vcv.P.obs[1,1,],
+  SettleVA = Data3$vcv.obs$VA$vcv.G.obs[2,2,] / Data3$vcv.obs$VA$vcv.P.obs[2,2,],
+  HatchVM = Data3$vcv.obs$VM$vcv.G.obs[1,1,] / Data3$vcv.obs$VM$vcv.P.obs[1,1,],
+  SettleVM = Data3$vcv.obs$VM$vcv.G.obs[2,2,] / Data3$vcv.obs$VM$vcv.P.obs[2,2,],
+  HatchVD = Data3$vcv.obs$VD$vcv.G.obs[1,1,] / Data3$vcv.obs$VD$vcv.P.obs[1,1,],
+  SettleVD = Data3$vcv.obs$VD$vcv.G.obs[2,2,] / Data3$vcv.obs$VD$vcv.P.obs[2,2,]
   )
-
 
 d_hatchsettle <- tmp |> 
   pivot_longer(cols = everything(), cols_vary = 'slowest') |> 
@@ -74,12 +73,11 @@ d_hatchsettle <- tmp |>
 
 
 
-
 # Make Figure ----
-vc_color <- data.frame(color = c("grey",
-                                 "#2a9d8f",
-                                 "#E9C46A",
-                                 "#E76F51"))
+vc_color <- c("grey",
+              "#2a9d8f",
+              "#E9C46A",
+              "#E76F51")
 
 ## Plotting parameters ----
 brks <- seq(0,1,0.1)
@@ -91,7 +89,7 @@ title_label_size <- 10
 point_size <- 2
 segment_size <- 0.5
 alp <- 0.4
-bw <- 0.005
+bw <- 0.01
 sc <- 0.9
 
 ## Panel A ----
@@ -140,18 +138,18 @@ panelA <- ggplot(d,
                size = segment_size) +
   scale_x_continuous(breaks = brks,
                      limits = lmts) +
-  scale_fill_manual(values = c("TrunkVA" = vc_color[4,], 
-                               "TrunkVM" = vc_color[3,],
-                               "TrunkVD" = vc_color[2,],
-                               "TrunkVR" = vc_color[1,])) +
+  scale_fill_manual(values = c("TrunkVA" = vc_color[4], 
+                               "TrunkVM" = vc_color[3],
+                               "TrunkVD" = vc_color[2],
+                               "TrunkVR" = vc_color[1])) +
   scale_y_discrete(labels = c("TrunkVA" = expression(V[A]), 
                               "TrunkVM" = expression(V[M]),
                               "TrunkVD" = expression(V[D]),
                               "TrunkVR" = expression(V[R]))) + 
-  scale_color_manual(values = c("TrunkVA" = vc_color[4,], 
-                                "TrunkVM" = vc_color[3,],
-                                "TrunkVD" = vc_color[2,],
-                                "TrunkVR" = vc_color[1,]))
+  scale_color_manual(values = c("TrunkVA" = vc_color[4], 
+                                "TrunkVM" = vc_color[3],
+                                "TrunkVD" = vc_color[2],
+                                "TrunkVR" = vc_color[1]))
 
 ## Panel B ----
 names_to_use <- c("TailVA", "TailVM", "TailVD", "TailVR")
@@ -203,21 +201,21 @@ panelB <- ggplot(d,
                size = segment_size) +
   scale_x_continuous(breaks = brks,
                      limits = lmts) +
-scale_fill_manual(values = c("TailVA" = vc_color[4,], 
-                               "TailVM" = vc_color[3,],
-                               "TailVD" = vc_color[2,],
-                               "TailVR" = vc_color[1,])) +
+scale_fill_manual(values = c("TailVA" = vc_color[4], 
+                             "TailVM" = vc_color[3],
+                             "TailVD" = vc_color[2],
+                             "TailVR" = vc_color[1])) +
   scale_y_discrete(labels = c("TailVA" = expression(V[A]), 
                               "TailVM" = expression(V[M]),
                               "TailVD" = expression(V[D]),
                               "TailVR" = expression(V[R]))) + 
-  scale_color_manual(values = c("TailVA" = vc_color[4,], 
-                                "TailVM" = vc_color[3,],
-                                "TailVD" = vc_color[2,],
-                                "TailVR" = vc_color[1,]))
+  scale_color_manual(values = c("TailVA" = vc_color[4], 
+                                "TailVM" = vc_color[3],
+                                "TailVD" = vc_color[2],
+                                "TailVR" = vc_color[1]))
 
 ## Panel C ----
-names_to_use <- c("ratioVA", "ratioVM", "ratioVD")
+names_to_use <- c("ratioVA", "ratioVM", "ratioVD", "ratioVR")
 
 d <- d_Trunktail_ratio |>
   filter(name %in% names_to_use) |> 
@@ -262,15 +260,18 @@ panelC <- ggplot(d,
                size = segment_size) +
   scale_x_continuous(breaks = brks,
                      limits = lmts) +
-  scale_fill_manual(values = c("ratioVA" = vc_color[4,], 
-                               "ratioVM" = vc_color[3,],
-                               "ratioVD" = vc_color[2,])) +
+  scale_fill_manual(values = c("ratioVA" = vc_color[4], 
+                               "ratioVM" = vc_color[3],
+                               "ratioVD" = vc_color[2],
+                               "ratioVR" = vc_color[1])) +
   scale_y_discrete(labels = c("ratioVA" = expression(V[A]), 
                               "ratioVM" = expression(V[M]),
-                              "ratioVD" = expression(V[D]))) + 
-  scale_color_manual(values = c("ratioVA" = vc_color[4,], 
-                                "ratioVM" = vc_color[3,],
-                                "ratioVD" = vc_color[2,]))
+                              "ratioVD" = expression(V[D]),
+                              "ratioVR" = expression(V[R]))) + 
+  scale_color_manual(values = c("ratioVA" = vc_color[4], 
+                                "ratioVM" = vc_color[3],
+                                "ratioVD" = vc_color[2],
+                                "ratioVR" = vc_color[1]))
 
 
 ## Panel D ----
@@ -319,15 +320,15 @@ panelD <- ggplot(d,
                size = segment_size) +
   scale_x_continuous(breaks = brks,
                      limits = lmts) +
-  scale_fill_manual(values = c("HatchVA" = vc_color[4,], 
-                               "HatchVM" = vc_color[3,],
-                               "HatchVD" = vc_color[2,])) +
+  scale_fill_manual(values = c("HatchVA" = vc_color[4], 
+                               "HatchVM" = vc_color[3],
+                               "HatchVD" = vc_color[2])) +
   scale_y_discrete(labels = c("HatchVA" = expression(V[A]), 
                               "HatchVM" = expression(V[M]),
                               "HatchVD" = expression(V[D]))) + 
-  scale_color_manual(values = c("HatchVA" = vc_color[4,], 
-                                "HatchVM" = vc_color[3,],
-                                "HatchVD" = vc_color[2,]))
+  scale_color_manual(values = c("HatchVA" = vc_color[4], 
+                                "HatchVM" = vc_color[3],
+                                "HatchVD" = vc_color[2]))
   
                                 
 ## Panel E ----
@@ -376,15 +377,15 @@ panelE <- ggplot(d,
                size = segment_size) +
   scale_x_continuous(breaks = brks,
                      limits = lmts) +
-  scale_fill_manual(values = c("SettleVA" = vc_color[4,], 
-                               "SettleVM" = vc_color[3,],
-                               "SettleVD" = vc_color[2,])) +
+  scale_fill_manual(values = c("SettleVA" = vc_color[4], 
+                               "SettleVM" = vc_color[3],
+                               "SettleVD" = vc_color[2])) +
   scale_y_discrete(labels = c("SettleVA" = expression(V[A]), 
                               "SettleVM" = expression(V[M]),
                               "SettleVD" = expression(V[D]))) + 
-  scale_color_manual(values = c("SettleVA" = vc_color[4,], 
-                                "SettleVM" = vc_color[3,],
-                                "SettleVD" = vc_color[2,]))
+  scale_color_manual(values = c("SettleVA" = vc_color[4], 
+                                "SettleVM" = vc_color[3],
+                                "SettleVD" = vc_color[2]))
 
 
 

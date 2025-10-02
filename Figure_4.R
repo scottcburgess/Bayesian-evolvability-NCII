@@ -1,41 +1,44 @@
 rm(list=ls())
 library('tidyverse')
-# library('ggridges')
+library('ggridges')
 source('0_misc_funcs.R')
 
 options(scipen = 999)
 
 
 # trunk Tail: load and prepare ----
-load("Model_outputs/Model_I_posterior_20250923_2343.rdata") 
+Data1 <- new.env()
+load("Model_outputs/Model_I_posterior_20250930_0019.rdata", envir = Data1) 
 
 # Prepare data 
 # Get the posterior samples by averaging across all of the random beta's
-eB_posterior_trunk_tail <- apply(e.params_BetaMCMC$post.dist$eB, 1, mean)
-rB_posterior_trunk_tail <- apply(e.params_BetaMCMC$post.dist$rB, 1, mean)
-cB_posterior_trunk_tail <- apply(e.params_BetaMCMC$post.dist$cB, 1, mean)
+eB_posterior_trunk_tail <- apply(Data1$e.params_BetaMCMC$post.dist$eB, 1, mean)
+rB_posterior_trunk_tail <- apply(Data1$e.params_BetaMCMC$post.dist$rB, 1, mean)
+cB_posterior_trunk_tail <- apply(Data1$e.params_BetaMCMC$post.dist$cB, 1, mean)
 # Check
 # e.params_BetaMCMC$summary # median (called e_mean) should be the same as
 # vecSmry(eB_posterior_trunk_tail) # median here (but we're using the mode)
 
-E_trunk_tail <- data.frame(name = c(rep("eB",length(eB_posterior_trunk_tail)),
-                                      rep("rB",length(rB_posterior_trunk_tail)),
-                                      rep("cB",length(cB_posterior_trunk_tail))),
-                             value = c(eB_posterior_trunk_tail,
-                                       rB_posterior_trunk_tail,
-                                       cB_posterior_trunk_tail))
+E_trunk_tail <- 
+  data.frame(name = c(rep("eB",length(eB_posterior_trunk_tail)),
+                      rep("rB",length(rB_posterior_trunk_tail)),
+                      rep("cB",length(cB_posterior_trunk_tail))),
+             value = c(eB_posterior_trunk_tail,
+                       rB_posterior_trunk_tail,
+                       cB_posterior_trunk_tail))
 
 E_trunk_tail <- E_trunk_tail |> 
   mutate(name = factor(name, levels = c("eB","rB","cB")))
 
 
 # Hatching Settling : load and prepare ----
-load("Model_outputs/Model_III_posterior_20250923_0204.rdata") 
+Data2 <- new.env()
+load("Model_outputs/Model_III_posterior_20250930_1554.rdata", envir = Data2) 
 
 ## Prepare data 
-eB_posterior_hatch_settle <- apply(e.params_BetaMCMC$post.dist$eB, 1, mean)
-rB_posterior_hatch_settle <- apply(e.params_BetaMCMC$post.dist$rB, 1, mean)
-cB_posterior_hatch_settle <- apply(e.params_BetaMCMC$post.dist$cB, 1, mean)
+eB_posterior_hatch_settle <- apply(Data2$e.params_BetaMCMC$post.dist$eB, 1, mean)
+rB_posterior_hatch_settle <- apply(Data2$e.params_BetaMCMC$post.dist$rB, 1, mean)
+cB_posterior_hatch_settle <- apply(Data2$e.params_BetaMCMC$post.dist$cB, 1, mean)
 # Check
 # e.params_BetaMCMC$summary # median (called e_mean) should be the same as
 # vecSmry(eB_posterior_hatch_settle) # median here (but we're using the mode)
@@ -65,14 +68,14 @@ brksA <- seq(0,0.002,0.0001)
 brksB <- seq(0,0.1,0.01)
 lmtsA <- c(0,0.0008)
 lmtsB <- c(0,0.06)
-x_text_size <- 6
-y_text_size <- 8
-axis_label_size <- 10
-title_label_size <- 10
+x_text_size <- 5
+y_text_size <- 7
+axis_label_size <- 9
+title_label_size <- 9
 point_size <- 2
 segment_size <- 0.5
 alp <- 0.4
-bw1 <- 0.000005
+bw1 <- 0.000015
 bw2 <- 0.001
 sc <- 0.9
 

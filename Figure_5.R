@@ -1,86 +1,227 @@
 rm(list=ls())
 library('tidyverse')
-library('gridExtra')
+library('ggridges')
+source('0_misc_funcs.R')
 
-# Load data
-load('3_Model_outputs/Model_IV_posterior_20230117_0038.rdata')
-
-pr.breaks <- seq(0, 1, length.out = 100)
-
-a.b <- sapply(dimnames(p$interaction.mean)[[2]], function(m) {
-  int.breaks <- seq(
-    floor(min(p$interaction.mean[, m, ])), 
-    ceiling(max(p$interaction.mean[, m, ])),
-    length.out = length(pr.breaks)
-  )
-  
-  pr.settle <- parallel::mclapply(int.breaks, function(x) {
-    sapply(1:model.data$n.interactions, function(i) {
-      p$intercept[m, ] + 
-        (p$int.beta[m, ] * x) +
-        (p$sire.beta[m, ] * t(p$additive.sire.eff[model.data$sire[i], m, ])) +
-        (p$maternal.beta[m, ] * t(p$maternal.eff[model.data$dam[i], m, ])) +
-        (p$block.beta[m, ] * t(p$block.eff[model.data$block[i], m, ]))
-    }) |>
-      as.vector() |>
-      plogis() |>
-      cut(pr.breaks, include.lowest = TRUE) |>
-      table()
-  }, mc.cores = 10) |> 
-    do.call(cbind, .) |> 
-    as.data.frame() |> 
-    remove_rownames() |> 
-    setNames(int.breaks) |> 
-    mutate(pr.settle = apply(cbind(pr.breaks[-length(pr.breaks)], pr.breaks[-1]), 1, mean)) |> 
-    pivot_longer(-pr.settle, names_to = 'interaction.mean', values_to = 'freq') |> 
-    mutate(
-      interaction.mean = as.numeric(interaction.mean),
-      interaction.mean.lik = dnorm(interaction.mean, mean(p$interaction.mean[, m, ]), sd(p$interaction.mean[, m, ])),
-      wt = freq * interaction.mean.lik
-    )
-  
-  ggplot(pr.settle, aes(interaction.mean, pr.settle)) +
-    geom_tile(aes(fill = wt)) +
-    geom_hline(yintercept = 0.5, color = 'white', alpha = 0.6, linetype = 'dashed', linewidth = 0.7) +
-    scale_fill_viridis_c(option = 'inferno') +
-    annotate(
-      'label', 
-      x = -Inf, 
-      y = -Inf, 
-      label = paste(
-        paste0('median = ', round(median(p$int.beta[m, ]), 3), '\n'),
-        paste0('mode = ', round(modeest::venter(p$int.beta[m, ]), 3), '\n'),
-        paste0('95% = ', paste(round(HDInterval::hdi(p$int.beta[m, ]), 3), collapse = ' - ')),
-        sep = '',
-        collapse = ''
-      ),
-      color="white",
-      fill=NA,
-      label.size=NA,
-      size=2,
-      hjust = 0,
-      vjust = 0
-    ) +
-    labs(
-      x = paste(ifelse(m == 'head', 'Trunk', 'Tail'), 'length\n(mean per full-sib family)'), 
-      y = 'Probability of settling',
-      title = ifelse(m == 'head', 'a)', 'b)') 
-    ) +
-    coord_cartesian(xlim = range(int.breaks), ylim = c(0, 1), expand = FALSE) +
-    theme_minimal() +
-    theme(
-      legend.position = 'none',
-      panel.grid = element_blank(),
-      # axis.title.x = element_text(hjust = 0.5),
-      # axis.title.y = element_text(hjust = 0.5),
-      axis.text.x = element_text(size = 8),
-      axis.text.y = element_text(size = 8),
-      axis.title = element_text(size = 10),
-      plot.title = element_text(size = 10, face = "plain")
-    )
-}, simplify = FALSE)
+options(scipen = 999)
 
 
-pdf('5_Figure_outputs/Figure 5.pdf', width = 5, height = 2.5)
-do.call(grid.arrange, c(a.b, ncol = 2, nrow = 1))
+# trunk Tail: load and prepare ----
+load("Model_outputs/Model_I_posterior_20250930_0019.rdata") 
+
+# Make Figure ----
+vc_color <- data.frame(color = c("#0077b6",
+                                 "#00b4d8",
+                                 "#73e8ff"))
+
+
+## Plotting parameters ----
+brksA <- seq(0,0.01,0.001)
+brksB <- seq(0,0.01,0.001)
+brksC <- seq(0,0.01,0.001)
+lmtsA <- c(0,0.0035)
+lmtsB <- c(0,0.0035)
+lmtsC <- c(0,0.0035)
+x_text_size <- 5
+y_text_size <- 7
+axis_label_size <- 7
+title_label_size <- 6
+point_size <- 2
+segment_size <- 0.5
+alp <- 0.4
+bw1 <- 0.00005
+bw2 <- 0.0004
+bw3 <- 0.0004
+sc <- 0.9
+
+## Panel A ----
+d <- e.params_beta |>
+  filter(Beta_index == "1") |>
+  select("e", "r", "c") |>
+  pivot_longer(
+    cols = c(e, r, c),
+    names_to = "name",
+    values_to = "value") |>
+  mutate(name = factor(name, levels = c("e","r","c")))
+
+summaries <- d |>
+  group_by(name) |>
+  summarise(summary_values = list(vecSmry(value)), .groups = 'drop') |>
+  unnest_wider(summary_values, names_repair = "unique")
+
+
+panelA <- ggplot(d, 
+                 aes(x = value, y = name, fill = name)) +
+  geom_density_ridges(scale = sc,
+                      alpha = alp,
+                      bandwidth = bw1,
+                      color = 'lightgrey',
+                      linewidth = 0.1) +
+  theme_ridges() + 
+  labs(x = "Evolvability",
+       y = "Metric",
+       title = "a) Selection for longer tails") +
+  theme(legend.position = "none",
+        axis.title.x = element_text(hjust = 0.5),
+        axis.title.y = element_text(hjust = 0.5),
+        axis.text.x = element_text(size = x_text_size, angle = 45),
+        axis.text.y = element_text(size = y_text_size),
+        axis.title = element_text(size = axis_label_size),
+        plot.title.position = "plot",
+        plot.title = element_text(size=title_label_size, face = "plain", hjust = 0)) +
+  geom_point(data = summaries, 
+             aes(x = mode, 
+                 y = as.numeric(name),
+                 color = name), 
+             size = point_size) +
+  geom_segment(data = summaries, 
+               aes(x = lower.hdi, 
+                   xend = upper.hdi, 
+                   y = as.numeric(name), 
+                   yend = as.numeric(name),
+                   color = name), 
+               linetype = "solid", 
+               size = segment_size) +
+  scale_x_continuous(breaks = brksA,
+                     limits = lmtsA) +
+  scale_fill_manual(values = c("e" = vc_color[1,], 
+                               "r" = vc_color[2,],
+                               "c" = vc_color[3,])) +
+  scale_y_discrete(labels = c("e" = expression(paste("e(",beta,")")), 
+                              "r" = expression(paste("r(",beta,")")),
+                              "c" = expression(paste("c(",beta,")")))) + 
+  scale_color_manual(values = c("e" = vc_color[1,], 
+                                "r" = vc_color[2,],
+                                "c" = vc_color[3,]))
+
+## Panel B ----
+d <- e.params_beta |>
+  filter(Beta_index == "2") |>
+  select("e", "r", "c") |>
+  pivot_longer(
+    cols = c(e, r, c),
+    names_to = "name",
+    values_to = "value") |>
+  mutate(name = factor(name, levels = c("e","r","c")))
+
+summaries <- d |>
+  group_by(name) |>
+  summarise(summary_values = list(vecSmry(value)), .groups = 'drop') |>
+  unnest_wider(summary_values, names_repair = "unique")
+
+
+panelB <- ggplot(d, 
+                 aes(x = value, y = name, fill = name)) +
+  geom_density_ridges(scale = sc,
+                      alpha = alp,
+                      bandwidth = bw2,
+                      color = 'lightgrey',
+                      linewidth = 0.1) +
+  theme_ridges() + 
+  labs(x = "Evolvability",
+       y = "Metric",
+       title = "b) Selection for short trunks, short tails") +
+  theme(legend.position = "none",
+        axis.title.x = element_text(hjust = 0.5),
+        axis.title.y = element_text(hjust = 0.5),
+        axis.text.x = element_text(size = x_text_size, angle = 45),
+        axis.text.y = element_text(size = y_text_size),
+        axis.title = element_text(size = axis_label_size),
+        plot.title.position = "plot",
+        plot.title = element_text(size=title_label_size, face = "plain", hjust = 0)) +
+  geom_point(data = summaries, 
+             aes(x = mode, 
+                 y = as.numeric(name),
+                 color = name), 
+             size = point_size) +
+  geom_segment(data = summaries, 
+               aes(x = lower.hdi, 
+                   xend = upper.hdi, 
+                   y = as.numeric(name), 
+                   yend = as.numeric(name),
+                   color = name), 
+               linetype = "solid", 
+               size = segment_size) +
+  scale_x_continuous(breaks = brksB,
+                     limits = lmtsB) +
+  scale_fill_manual(values = c("e" = vc_color[1,], 
+                               "r" = vc_color[2,],
+                               "c" = vc_color[3,])) +
+  scale_y_discrete(labels = c("e" = expression(paste("e(",beta,")")), 
+                              "r" = expression(paste("r(",beta,")")),
+                              "c" = expression(paste("c(",beta,")")))) + 
+  scale_color_manual(values = c("e" = vc_color[1,], 
+                                "r" = vc_color[2,],
+                                "c" = vc_color[3,]))
+
+## Panel C ----
+d <- e.params_beta |>
+  filter(Beta_index == "3") |>
+  select("e", "r", "c") |>
+  pivot_longer(
+    cols = c(e, r, c),
+    names_to = "name",
+    values_to = "value") |>
+  mutate(name = factor(name, levels = c("e","r","c")))
+
+summaries <- d |>
+  group_by(name) |>
+  summarise(summary_values = list(vecSmry(value)), .groups = 'drop') |>
+  unnest_wider(summary_values, names_repair = "unique")
+
+
+panelC <- ggplot(d, 
+                 aes(x = value, y = name, fill = name)) +
+  geom_density_ridges(scale = sc,
+                      alpha = alp,
+                      bandwidth = bw3,
+                      color = 'lightgrey',
+                      linewidth = 0.1) +
+  theme_ridges() + 
+  labs(x = "Evolvability",
+       y = "Metric",
+       title = "c) Selection for long trunks, short tails") +
+  theme(legend.position = "none",
+        axis.title.x = element_text(hjust = 0.5),
+        axis.title.y = element_text(hjust = 0.5),
+        axis.text.x = element_text(size = x_text_size, angle = 45),
+        axis.text.y = element_text(size = y_text_size),
+        axis.title = element_text(size = axis_label_size),
+        plot.title.position = "plot",
+        plot.title = element_text(size=title_label_size, face = "plain", hjust = 0)) +
+  geom_point(data = summaries, 
+             aes(x = mode, 
+                 y = as.numeric(name),
+                 color = name), 
+             size = point_size) +
+  geom_segment(data = summaries, 
+               aes(x = lower.hdi, 
+                   xend = upper.hdi, 
+                   y = as.numeric(name), 
+                   yend = as.numeric(name),
+                   color = name), 
+               linetype = "solid", 
+               size = segment_size) +
+  scale_x_continuous(breaks = brksC,
+                     limits = lmtsC) +
+  scale_fill_manual(values = c("e" = vc_color[1,], 
+                               "r" = vc_color[2,],
+                               "c" = vc_color[3,])) +
+  scale_y_discrete(labels = c("e" = expression(paste("e(",beta,")")), 
+                              "r" = expression(paste("r(",beta,")")),
+                              "c" = expression(paste("c(",beta,")")))) + 
+  scale_color_manual(values = c("e" = vc_color[1,], 
+                                "r" = vc_color[2,],
+                                "c" = vc_color[3,]))
+
+
+fig5 <- gridExtra::grid.arrange(panelA,
+                                panelB,
+                                panelC,
+                                nrow = 1,
+                                ncol = 3)
+ggsave("Figures and Tables/Figure 5.pdf", 
+       plot = fig5, 
+       height = 2, 
+       width = 5)
 dev.off()
