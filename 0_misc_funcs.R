@@ -1,8 +1,12 @@
-vecSmry <- function(x) {      
-  setNames(
+vecSmry <- function(x) { 
+  library(tidyverse)
+  smry <- setNames(
     c(median(x), modeest::mlv(x, method = "venter"), HDInterval::hdi(x)),
     c("median", "mode", "lower.hdi", "upper.hdi")
   )[c("lower.hdi", "median", "mode", "upper.hdi")]
+  smry['pr.lt.hdi'] <- mean(x < smry['lower.hdi'])
+  smry['pr.gt.hdi'] <- mean(x > smry['upper.hdi'])
+  smry
 }
 
 comp.smry <- function(x, gt = 0) {
