@@ -110,7 +110,8 @@ p <- swfscMisc::runjags2list(post)
 p$VA <- 4 * p$sire.var
 p$VM <- p$dam.var - p$sire.var
 p$VD <- 4 * p$interaction.var
-p$VP <- p$VA + p$VM + p$VD + p$resid.var
+p$VR <- p$resid.var
+p$VP <- p$VA + p$VM + p$VD + p$VR
 
 # Compute heritability and evolvability based on deVillemereuil et al 2016
 convertVarScale <- function(metric, p) {
@@ -130,7 +131,7 @@ convertVarScale <- function(metric, p) {
   }) |> 
     bind_rows()
 }
-var.obs <- sapply(c('VA', 'VM', 'VD'), convertVarScale, p = p, simplify = FALSE)
+var.obs <- sapply(c('VA', 'VM', 'VD', 'VR'), convertVarScale, p = p, simplify = FALSE)
 
 p$H <- var.obs$VA$h2.obs
 p$E <- var.obs$VA |> 

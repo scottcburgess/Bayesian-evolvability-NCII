@@ -142,23 +142,23 @@ data.frame(ratio = e.ratio) |>
 This is for a random set of selection gradients.
 ```{r}
 # Get the posterior samples by averaging across all of the random beta's
-eB_posterior_head_tail <- apply(e.params_BetaMCMC$post.dist$eB, 1, mean)
-rB_posterior_head_tail <- apply(e.params_BetaMCMC$post.dist$rB, 1, mean)
-cB_posterior_head_tail <- apply(e.params_BetaMCMC$post.dist$cB, 1, mean)
-aB_posterior_head_tail <- apply(e.params_BetaMCMC$post.dist$aB, 1, mean)
-iB_posterior_head_tail <- apply(e.params_BetaMCMC$post.dist$iB, 1, mean)
+eB_posterior_trunk_tail <- apply(e.params_BetaMCMC$post.dist$eB, 1, mean)
+rB_posterior_trunk_tail <- apply(e.params_BetaMCMC$post.dist$rB, 1, mean)
+cB_posterior_trunk_tail <- apply(e.params_BetaMCMC$post.dist$cB, 1, mean)
+aB_posterior_trunk_tail <- apply(e.params_BetaMCMC$post.dist$aB, 1, mean)
+iB_posterior_trunk_tail <- apply(e.params_BetaMCMC$post.dist$iB, 1, mean)
 
 E_trunk_tail <- 
-  data.frame(name = c(rep("eB",length(eB_posterior_head_tail)),
-                      rep("rB",length(rB_posterior_head_tail)),
-                      rep("cB",length(cB_posterior_head_tail)),
-                      rep("aB",length(aB_posterior_head_tail)),
-                      rep("iB",length(iB_posterior_head_tail))),
-             value = c(eB_posterior_head_tail,
-                       rB_posterior_head_tail,
-                       cB_posterior_head_tail,
-                       aB_posterior_head_tail,
-                       iB_posterior_head_tail))
+  data.frame(name = c(rep("eB",length(eB_posterior_trunk_tail)),
+                      rep("rB",length(rB_posterior_trunk_tail)),
+                      rep("cB",length(cB_posterior_trunk_tail)),
+                      rep("aB",length(aB_posterior_trunk_tail)),
+                      rep("iB",length(iB_posterior_trunk_tail))),
+             value = c(eB_posterior_trunk_tail,
+                       rB_posterior_trunk_tail,
+                       cB_posterior_trunk_tail,
+                       aB_posterior_trunk_tail,
+                       iB_posterior_trunk_tail))
 
 E_trunk_tail <- E_trunk_tail |> 
   mutate(name = factor(name, levels = c("eB","rB","cB", "iB", "aB"))) |>
