@@ -6,6 +6,7 @@ vecSmry <- function(x) {
   )[c("lower.hdi", "median", "mode", "upper.hdi")]
   smry['pr.lt.hdi'] <- mean(x < smry['lower.hdi'])
   smry['pr.gt.hdi'] <- mean(x > smry['upper.hdi'])
+  smry['5pc.exceeds'] <- quantile(x, 0.95)
   smry
 }
 
