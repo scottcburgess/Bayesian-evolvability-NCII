@@ -75,6 +75,13 @@ plot.metric(vcv.obs$VD$vcv.G.obs)
 ```
 \newpage  
 
+## V~P~ on the observed scale   
+```{r}
+comp.smry(vcv.obs$VA$vcv.P.obs)
+plot.metric(vcv.obs$VA$vcv.P.obs)
+```
+\newpage  
+
 ## V~M~ / V~A~ on the observed scale   
 ```{r}
 vm.va <- vcv.obs$VM$vcv.G.obs / vcv.obs$VA$vcv.G.obs
