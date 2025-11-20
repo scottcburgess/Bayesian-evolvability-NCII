@@ -16,12 +16,12 @@ vc_color <- data.frame(color = c("#0077b6",
 
 
 ## Plotting parameters ----
-brksA <- seq(0,0.01,0.001)
-brksB <- seq(0,0.01,0.001)
-brksC <- seq(0,0.01,0.001)
-lmtsA <- c(0,0.0035)
-lmtsB <- c(0,0.0035)
-lmtsC <- c(0,0.0035)
+brksA <- seq(0,0.01,0.0005)
+brksB <- seq(0,0.01,0.0005)
+brksC <- seq(0,0.01,0.0005)
+lmtsA <- c(0,0.0025)
+lmtsB <- c(0,0.0025)
+lmtsC <- c(0,0.0025)
 x_text_size <- 5
 y_text_size <- 7
 axis_label_size <- 7
@@ -58,7 +58,7 @@ panelA <- ggplot(d,
                       color = 'lightgrey',
                       linewidth = 0.1) +
   theme_ridges() + 
-  labs(x = "Evolvability",
+  labs(x = "Evolvability (%)",
        y = "Metric",
        title = "a) Selection for longer tails") +
   theme(legend.position = "none",
@@ -83,7 +83,8 @@ panelA <- ggplot(d,
                linetype = "solid", 
                size = segment_size) +
   scale_x_continuous(breaks = brksA,
-                     limits = lmtsA) +
+                     limits = lmtsA,
+                     labels = ~.x*100) +
   scale_fill_manual(values = c("e" = vc_color[1,], 
                                "r" = vc_color[2,],
                                "c" = vc_color[3,])) +
@@ -118,7 +119,7 @@ panelB <- ggplot(d,
                       color = 'lightgrey',
                       linewidth = 0.1) +
   theme_ridges() + 
-  labs(x = "Evolvability",
+  labs(x = "Evolvability (%)",
        y = "Metric",
        title = "b) Selection for short trunks, short tails") +
   theme(legend.position = "none",
@@ -143,7 +144,8 @@ panelB <- ggplot(d,
                linetype = "solid", 
                size = segment_size) +
   scale_x_continuous(breaks = brksB,
-                     limits = lmtsB) +
+                     limits = lmtsB,
+                     labels = ~.x*100) +
   scale_fill_manual(values = c("e" = vc_color[1,], 
                                "r" = vc_color[2,],
                                "c" = vc_color[3,])) +
@@ -178,7 +180,7 @@ panelC <- ggplot(d,
                       color = 'lightgrey',
                       linewidth = 0.1) +
   theme_ridges() + 
-  labs(x = "Evolvability",
+  labs(x = "Evolvability (%)",
        y = "Metric",
        title = "c) Selection for long trunks, short tails") +
   theme(legend.position = "none",
@@ -203,7 +205,8 @@ panelC <- ggplot(d,
                linetype = "solid", 
                size = segment_size) +
   scale_x_continuous(breaks = brksC,
-                     limits = lmtsC) +
+                     limits = lmtsC,
+                     labels = ~.x*100) +
   scale_fill_manual(values = c("e" = vc_color[1,], 
                                "r" = vc_color[2,],
                                "c" = vc_color[3,])) +

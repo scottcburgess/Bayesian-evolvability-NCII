@@ -94,7 +94,7 @@ panelA <- ggplot(E_trunk_tail,
                       color = 'lightgrey',
                       linewidth = 0.1) +
   theme_ridges() + 
-  labs(x = "Evolvability",
+  labs(x = "Evolvability (%)",
        y = "Metric",
        title = "a) Trunk-Tail length") +
   theme(legend.position = "none",
@@ -118,7 +118,8 @@ panelA <- ggplot(E_trunk_tail,
                linetype = "solid", 
                size = segment_size) +
   scale_x_continuous(breaks = brksA,
-                     limits = lmtsA) +
+                     limits = lmtsA,
+                     labels = ~.x*100) +
   scale_fill_manual(values = c("eB" = vc_color[1,], 
                                "rB" = vc_color[2,],
                                "cB" = vc_color[3,])) +
@@ -144,13 +145,13 @@ panelB <- ggplot(E_hatch_settle,
                       color = 'lightgrey',
                       linewidth = 0.1) +
   theme_ridges() + 
-  labs(x = "Evolvability",
+  labs(x = "Evolvability (%)",
        y = "Metric",
-       title = "b) Hatch-Settle") +
+       title = "b) Hatch-Settle probability") +
   theme(legend.position = "none",
         axis.title.x = element_text(hjust = 0.5),
         axis.title.y = element_text(hjust = 0.5),
-        axis.text.x = element_text(size = x_text_size, angle = 45),
+        axis.text.x = element_text(size = x_text_size, angle = 0),
         axis.text.y = element_text(size = y_text_size),
         axis.title = element_text(size = axis_label_size),
         plot.title = element_text(size=title_label_size, face = "plain")) +
@@ -168,7 +169,8 @@ panelB <- ggplot(E_hatch_settle,
                linetype = "solid", 
                size = segment_size) +
   scale_x_continuous(breaks = brksB,
-                     limits = lmtsB) +
+                     limits = lmtsB,
+                     labels = ~.x*100) +
   scale_fill_manual(values = c("eB" = vc_color[1,], 
                                "rB" = vc_color[2,],
                                "cB" = vc_color[3,])) +

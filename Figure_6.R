@@ -86,7 +86,7 @@ panelA <- ggplot(df,
                fill = 'lightgrey',
                linewidth = 0.1) +
   labs(x = "% change per generation",
-       y = "Probability",
+       y = "Probability density",
        title = "a) Trunk length") +
   theme_ridges() +
   theme(legend.position = "none",
@@ -129,7 +129,7 @@ panelB <- ggplot(df,
                fill = 'lightgrey',
                linewidth = 0.1) +
   labs(x = "% change per generation",
-       y = "Probability",
+       y = "Probability density",
        title = "b) Tail length") +
   theme_ridges() +
   theme(legend.position = "none",
