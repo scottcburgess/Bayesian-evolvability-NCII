@@ -176,8 +176,8 @@ e.params_BetaMCMC <- evolvability::evolvabilityBetaMCMC(
 B <- matrix(
   c(
     c(0, 1), # strong selection for long tails only, 
-    c(-1, -1), # strong selection for short trunks and short tails
-    c(1, -1) # strong selection for large trunks and small tails
+    c(-(1/sqrt(2)), -(1/sqrt(2))), # strong selection for short trunks and short tails
+    c((1/sqrt(2)), -(1/sqrt(2))) # strong selection for large trunks and small tails
   ), 
   nrow = 2, 
   ncol = 3

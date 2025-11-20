@@ -171,8 +171,8 @@ pander::pander(E_trunk_tail)
 ## Evolvability (from G matrix) v2 
 This is for a specific set of selection gradients:    
 Beta_index = 1 is $\beta = \begin{bmatrix} 0 \\ 1 \end{bmatrix}$ = strong selection for longer tails only  
-Beta_index = 2 is $\beta = \begin{bmatrix} -1 \\ -1 \end{bmatrix}$ = strong selection for shorter trunks and shorter tails  
-Beta_index = 3 is $\beta = \begin{bmatrix} 1 \\ -1 \end{bmatrix}$ = strong selection for longer trunks and shorter tails  
+Beta_index = 2 is $\beta = \begin{bmatrix} -(1/\sqrt2) \\ -(1/\sqrt2) \end{bmatrix}$ = strong selection for shorter trunks and shorter tails  
+Beta_index = 3 is $\beta = \begin{bmatrix} (1/\sqrt2) \\ -(1/\sqrt2) \end{bmatrix}$ = strong selection for longer trunks and shorter tails  
 
 ```{r}
 summary_stacked <- e.params_beta %>%
