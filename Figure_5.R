@@ -226,5 +226,5 @@ fig5 <- gridExtra::grid.arrange(panelA,
 ggsave("Figures and Tables/Figure 5.pdf", 
        plot = fig5, 
        height = 2, 
-       width = 5)
+       width = 6)
 dev.off()

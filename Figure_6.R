@@ -3,15 +3,12 @@ library('tidyverse')
 library('ggridges')
 source('0_misc_funcs.R')
 
-options(scipen = 999)
+# options(scipen = 999)
 
 
 # load and prepare ----
 load("Model_outputs/Model_IV_posterior_20251001_0640.rdata") 
 
-
-## G matrix  
-G_matrix <- p$VA[1:2,1:2,]
 
 # Trunk selection differential  
 cov_trunk_p <- vcv.obs$vcv.G.obs[1,3,]
@@ -23,44 +20,31 @@ cov_tail_p <- vcv.obs$vcv.G.obs[2,3,]
 mean_p <- vcv.obs$mean.obs[, "Settling"]
 cov_tail_p_relative <- cov_tail_p / mean_p # selection differential
 
-## Selection gradients
-sg <- rbind(cov_trunk_p_relative, cov_tail_p_relative)  # 2 x n_iter
-
-n_iter <- dim(G_matrix[,,])[3]
-
-beta <- matrix(NA, nrow = 2, ncol = n_iter,
-               dimnames = list(c("Trunk", "Tail"), NULL))
-
-for (i in seq_len(n_iter)) {
-  G <- G_matrix[, , i]
-  S_vec <- sg[, i]
-  beta[, i] <- solve(G) %*% S_vec
-}
-
-# The % change in trunk and tail length per generation (assuming fitness is settlement)   
-# Extract means for convenience
-mean_trunk <- p$mean.overall[1,]
-mean_tail  <- p$mean.overall[2,]
-
-# Extract variances and covariance
-VA11 <- p$VA[1,1,]  # Var(Trunk)
-VA22 <- p$VA[2,2,]  # Var(Tail)
-VA12 <- p$VA[1,2,]  # Cov(Trunk, Tail)
+# Extract means
+mean_z <- rbind(p$mean.overall[1,], p$mean.overall[2,])
 
 # Compute trunk and tail evolvability
-E_matrix <- rbind(
-  Trunk = (VA11 / mean_trunk^2) * beta[1, ] + (VA12 / (mean_trunk * mean_tail)) * beta[2, ],
-  Tail  = (VA22 / mean_tail^2)  * beta[2, ] + (VA12 / (mean_trunk * mean_tail)) * beta[1, ]
-)
+sg <- rbind(cov_trunk_p_relative, cov_tail_p_relative)  # 2 x n_iter
+
+n_iter <- dim(sg)[2]
+
+E_matrix <- matrix(NA, nrow = 2, ncol = n_iter,
+                   dimnames = list(c("Trunk", "Tail"), NULL))
+
+for (i in seq_len(n_iter)) {
+  S_vec <- sg[, i]
+  mean_vec <- mean_z[, i]
+  E_matrix[, i] <- S_vec / mean_vec
+}
 
 
 # Make Figure ----
 
 ## Plotting parameters ----
-brksA<- seq(-0.003,0.01,0.001)
-brksB<- seq(-0.003,0.01,0.0005)
-lmtsA <- c(-0.002,0.003)
-lmtsB <- c(-0.001,0.0035)
+brksA<- seq(-0.5,1,0.1)
+brksB<- seq(-0.5,1,0.1)
+lmtsA <- c(-0.5,1)
+lmtsB <- c(-0.5,1)
 x_text_size <- 5
 y_text_size <- 7
 axis_label_size <- 7
@@ -71,10 +55,10 @@ alp <- 0.4
 
 
 ## Panel A ----
-d <- E_matrix['Trunk', ] * 100
+d <- E_matrix['Trunk', , drop = F] * 100
 
 df <- data.frame(
-  sample = names(d),       
+  sample = rownames(d),       
   value = as.numeric(d))
 
 summaries <- as.data.frame(t(vecSmry(df$value)))
@@ -82,6 +66,7 @@ summaries$y <- 0
 
 panelA <- ggplot(df, 
                  aes(x = value)) +
+  geom_vline(xintercept = 0, linetype = "dotted", color = "grey50") +
   geom_density(alpha = alp,
                fill = 'lightgrey',
                linewidth = 0.1) +
@@ -114,10 +99,10 @@ panelA <- ggplot(df,
 
 
 ## Panel B ----
-d <- E_matrix['Tail', ] * 100
+d <- E_matrix['Tail', , drop = F] * 100
 
 df <- data.frame(
-  sample = names(d),       
+  sample = rownames(d),       
   value = as.numeric(d))
 
 summaries <- as.data.frame(t(vecSmry(df$value)))
@@ -125,6 +110,7 @@ summaries$y <- 0
 
 panelB <- ggplot(df, 
                  aes(x = value)) +
+  geom_vline(xintercept = 0, linetype = "dotted", color = "grey50") +
   geom_density(alpha = alp,
                fill = 'lightgrey',
                linewidth = 0.1) +

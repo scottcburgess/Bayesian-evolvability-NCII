@@ -65,11 +65,11 @@ plot.metric(G_matrix)
 
 
 ## Selection differentials, s<sub>g</sub> = cov<sub>g</sub>(w, z)  
-- We have Cov(length, p) on the data scale, from QGmvparams() 
-- We want Cov(length, w) where w = p / mean(p) (relative fitness)  
+- We have Cov(p, length) on the data scale, from QGmvparams() 
+- We want Cov(w, length) where w = p / mean(p) (relative fitness)  
 - Use linear scaling property of covariance, so that:  
-Cov(length, w) = Cov(length, p / mean(p)) = 1 / mean(p) * Cov(length, p)  
-- So we just divide Cov(length, p) by the mean of p  
+Cov(w, length) = Cov(p / mean(p), length) = 1 / mean(p) * Cov(p, length)  
+- So we just divide Cov(p, length) by the mean of p  
 
 Trunk selection differential  
 ```{r}
@@ -123,21 +123,27 @@ plot.metric(beta[2,])
 
 ## Evolvability  
 Predicts the % change in trunk and tail length per generation (assuming fitness is settlement)   
+\[
+\frac{\Delta z_i}{\bar{z}_i} \times 100
+=
+\frac{s_{g,i}}{\bar{z}_i} \times 100
+\qquad \text{for each trait } i.
+\]
 ```{r}
-# Extract means for convenience
-mean_trunk <- p$mean.overall[1,]
-mean_tail  <- p$mean.overall[2,]
-
-# Extract variances and covariance
-VA11 <- p$VA[1,1,]  # Var(Trunk)
-VA22 <- p$VA[2,2,]  # Var(Tail)
-VA12 <- p$VA[1,2,]  # Cov(Trunk, Tail)
+# Extract means
+mean_z <- rbind(p$mean.overall[1,], p$mean.overall[2,])
 
 # Compute trunk and tail evolvability
-E_matrix <- rbind(
-  Trunk = (VA11 / mean_trunk^2) * beta[1, ] + (VA12 / (mean_trunk * mean_tail)) * beta[2, ],
-  Tail  = (VA22 / mean_tail^2)  * beta[2, ] + (VA12 / (mean_trunk * mean_tail)) * beta[1, ]
-)
+n_iter <- dim(sg)[2]
+
+E_matrix <- matrix(NA, nrow = 2, ncol = n_iter,
+                     dimnames = list(c("Trunk", "Tail"), NULL))
+
+for (i in seq_len(n_iter)) {
+  S_vec <- sg[, i]
+  mean_vec <- mean_z[, i]
+  E_matrix[, i] <- S_vec / mean_vec
+}
 
 (E_matrix * 100) |> 
   apply(1, function(x) {
