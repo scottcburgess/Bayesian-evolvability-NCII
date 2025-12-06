@@ -76,6 +76,12 @@ comp.smry(p$VD)
 plot.metric(p$VD)
 ```
 
+## V~R~
+```{r}
+comp.smry(p$resid.vcov)
+plot.metric(p$resid.vcov)
+```
+
 ## V~P~
 ```{r}
 comp.smry(p$VP)
