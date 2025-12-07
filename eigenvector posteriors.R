@@ -26,6 +26,8 @@ param.df <- data.frame(
   )
 
 
+
+
 slope.smry <- lapply(
   param.df$param, 
   function(param) {
@@ -69,21 +71,22 @@ p1 <- slope.smry |>
   geom_hline(yintercept = 0, linewidth = 1, color = "gray") +
   geom_vline(xintercept = 0, linewidth = 1, color = "gray") +
   geom_abline(
+    aes(slope = lower, intercept = intercept, color = label),
+    alpha = 0.75,
+    linetype = 'dashed',
+    linewidth = 1
+  ) +
+  geom_abline(
+    aes(slope = upper, intercept = intercept, color = label),
+    alpha = 0.75,
+    linetype = 'dashed',
+    linewidth = 1
+  ) +
+  geom_abline(
     aes(slope = median, intercept = intercept, color = label), 
+    data = slope.smry,
     linewidth = 1
   ) + 
-  geom_abline(
-    aes(slope = lower, intercept = intercept, color = label), 
-    alpha = 0.75,
-    linetype = 'dashed',
-    linewidth = 1
-  ) +
-  geom_abline(
-    aes(slope = upper, intercept = intercept, color = label), 
-    alpha = 0.75,
-    linetype = 'dashed',
-    linewidth = 1
-  ) +
   coord_equal() +
   labs(x = "Trunk length", y = "Tail length") +
   lims(x = lims, y = lims) +
