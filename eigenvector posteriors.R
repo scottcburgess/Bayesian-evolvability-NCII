@@ -39,7 +39,7 @@ slope.smry <- lapply(
         matrix(nrow = 2, byrow = TRUE) |> 
         eigen() |> 
         pluck('vectors')
-      eigenvectors <- ifelse(eigenvectors < 0, eigenvectors * -1, eigenvectors)
+      # eigenvectors <- ifelse(eigenvectors < 0, eigenvectors * -1, eigenvectors)
       atan2(eigenvectors[2, 1], eigenvectors[1, 1])
     })
     
