@@ -96,7 +96,7 @@ ellipses <- matrix.smry |>
   lapply(function(x) x$ellipses) |> 
   bind_rows() |> 
   left_join(select(param.df, param, label), by = 'param') |> 
-  arrange(pr)
+  arrange(desc(pr))
 
 # extract slope summaries
 slope.smry <- lapply(matrix.smry, function(x) x$slope.smry) |> 
@@ -114,7 +114,7 @@ p1 <- ellipses |>
   geom_hline(yintercept = 0, linewidth = 1, color = "gray", alpha = 0.6) +
   geom_vline(xintercept = 0, linewidth = 1, color = "gray", alpha = 0.6) +
   geom_polygon(
-    aes(x, y, color = label, fill = label, alpha = 1 - pr, group = pr),
+    aes(x, y, color = label, fill = label, alpha = pr, group = pr),
     linewidth = 0.1
   ) +
   geom_abline(
