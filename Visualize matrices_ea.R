@@ -37,28 +37,44 @@ ran_mvnorm <- function(vec) {
 
 
 # compute ellipses at selected intervals from random multivariate normal draws
-ran_ellipses <- function(param, p) {
+smrz_matrix <- function(param, p) {
   # random multivariate normal draws from mean-centered covariance matrices
-  pts <- evolvability::meanStdGMCMC(
+  mat <- evolvability::meanStdGMCMC(
     t(apply(p[[param]], 3, as.vector)),
     t(p$mean.overall)
-  ) |> 
-    apply(1, ran_mvnorm, simplify = FALSE) |> 
-    bind_rows() 
+  ) 
   
+  rads <- apply(mat, 1, function(vec) {
+    eigenvectors <- vec |> 
+      matrix(nrow = 2, byrow = TRUE) |> 
+      eigen() |> 
+      pluck('vectors')
+    # eigenvectors <- ifelse(eigenvectors < 0, eigenvectors * -1, eigenvectors)
+    atan2(eigenvectors[2, 1], eigenvectors[1, 1])
+  })
+  
+  
+  pts <- apply(mat, 1, ran_mvnorm, simplify = FALSE) |> 
+    bind_rows() 
   mu <- colMeans(pts)
   sigma <- cov(pts)
-  eigenvectors <- eigen(sigma)$vectors
   
   list(
-    # major and minor axes of data
-    axes = data.frame(
-      major = eigenvectors[2, 1] / eigenvectors[1, 1],
-      minor = eigenvectors[2, 2] / eigenvectors[1, 2],
-      param = param
-    ),
+    slope.smry = c(
+      median = rads |> 
+        circular::circular(units = 'radians') |> 
+        circular::median.circular() |> 
+        tan(),
+      rads |> 
+        HDInterval::hdi() |> 
+        tan()
+    ) |> 
+      rbind() |> 
+      as.data.frame() |> 
+      mutate(param = param),
+    
     # ellipses at selected intervals
-    ellipses =  lapply(
+    ellipses = lapply(
       seq(0.05, 0.95, length.out = 10),
       function(pr) {
         ellipse::ellipse(sigma, centre = mu, level = pr) |> 
@@ -72,21 +88,21 @@ ran_ellipses <- function(param, p) {
   )
 }
 
-# get ellipses and axes for each sample
-ellipse_samples <- lapply(param.df$param, ran_ellipses, p = p) 
+# get ellipses and slope summaries for each parameter
+matrix.smry <- lapply(param.df$param, smrz_matrix, p = p) 
 
 # extract ellipses
-ellipses <- ellipse_samples |> 
+ellipses <- matrix.smry |> 
   lapply(function(x) x$ellipses) |> 
   bind_rows() |> 
-  left_join(select(param.df, param, label), by = 'param') 
-
-# extract axes
-axes <- ellipse_samples |> 
-  lapply(function(x) x$axes) |> 
-  bind_rows() |> 
   left_join(select(param.df, param, label), by = 'param') |> 
-  mutate(intercept = 0)
+  arrange(pr)
+
+# extract slope summaries
+slope.smry <- lapply(matrix.smry, function(x) x$slope.smry) |> 
+  bind_rows() |> 
+  mutate(intercept = 0) |> 
+  left_join(select(param.df, param, label), by = 'param')
 
 # axis limits to make figure square
 lims <- unlist(ellipses[, c('x', 'y')]) |> 
@@ -94,23 +110,29 @@ lims <- unlist(ellipses[, c('x', 'y')]) |>
   range()
 
 p1 <- ellipses |> 
-  arrange(pr) |> 
   ggplot() +
-  geom_hline(yintercept = 0, linewidth = 1, color = "gray") +
-  geom_vline(xintercept = 0, linewidth = 1, color = "gray") +
-  geom_abline(
-    aes(slope = major, intercept = intercept, color = label), 
-    data = axes,
-    linewidth = 1
-  ) +
-  geom_abline(
-    aes(slope = minor, intercept = intercept, color = label), 
-    data = axes,
-    linewidth = 1
-  ) +
+  geom_hline(yintercept = 0, linewidth = 1, color = "gray", alpha = 0.6) +
+  geom_vline(xintercept = 0, linewidth = 1, color = "gray", alpha = 0.6) +
   geom_polygon(
     aes(x, y, color = label, fill = label, alpha = 1 - pr, group = pr),
     linewidth = 0.1
+  ) +
+  geom_abline(
+    aes(slope = lower, intercept = intercept, color = label), 
+    data = slope.smry,
+    linetype = 'dashed',
+    linewidth = 1
+  ) +
+  geom_abline(
+    aes(slope = upper, intercept = intercept, color = label), 
+    data = slope.smry,
+    linetype = 'dashed',
+    linewidth = 1
+  ) +  
+  geom_abline(
+    aes(slope = median, intercept = intercept, color = label), 
+    data = slope.smry,
+    linewidth = 1
   ) +
   scale_color_manual(
     values = param.df |> 
