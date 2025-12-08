@@ -28,7 +28,7 @@ E_trunk_tail <-
                        cB_posterior_trunk_tail))
 
 E_trunk_tail <- E_trunk_tail |> 
-  mutate(name = factor(name, levels = c("eB","rB","cB")))
+  mutate(name = factor(name, levels = c("eB","cB","rB")))
 
 
 # Hatching Settling : load and prepare ----
@@ -51,7 +51,7 @@ E_hatch_settle <- data.frame(name = c(rep("eB",length(eB_posterior_hatch_settle)
                                        cB_posterior_hatch_settle))
     
 E_hatch_settle <- E_hatch_settle |> 
-  mutate(name = factor(name, levels = c("eB","rB","cB")))
+  mutate(name = factor(name, levels = c("eB","cB","rB")))
 
 
 
@@ -121,14 +121,14 @@ panelA <- ggplot(E_trunk_tail,
                      limits = lmtsA,
                      labels = ~.x*100) +
   scale_fill_manual(values = c("eB" = vc_color[1,], 
-                               "rB" = vc_color[2,],
-                               "cB" = vc_color[3,])) +
+                               "cB" = vc_color[2,],
+                               "rB" = vc_color[3,])) +
   scale_y_discrete(labels = c("eB" = expression(paste("e(",beta,")")), 
-                              "rB" = expression(paste("r(",beta,")")),
-                              "cB" = expression(paste("c(",beta,")")))) + 
+                              "cB" = expression(paste("c(",beta,")")),
+                              "rB" = expression(paste("r(",beta,")")))) + 
   scale_color_manual(values = c("eB" = vc_color[1,], 
-                                "rB" = vc_color[2,],
-                                "cB" = vc_color[3,]))
+                                "cB" = vc_color[2,],
+                                "rB" = vc_color[3,]))
 
 ## Panel B ----
 summaries <- E_hatch_settle |>
@@ -172,14 +172,14 @@ panelB <- ggplot(E_hatch_settle,
                      limits = lmtsB,
                      labels = ~.x*100) +
   scale_fill_manual(values = c("eB" = vc_color[1,], 
-                               "rB" = vc_color[2,],
-                               "cB" = vc_color[3,])) +
+                               "cB" = vc_color[2,],
+                               "rB" = vc_color[3,])) +
   scale_y_discrete(labels = c("eB" = expression(paste("e(",beta,")")), 
-                              "rB" = expression(paste("r(",beta,")")),
-                              "cB" = expression(paste("c(",beta,")")))) + 
+                              "cB" = expression(paste("c(",beta,")")),
+                              "rB" = expression(paste("r(",beta,")")))) + 
   scale_color_manual(values = c("eB" = vc_color[1,], 
-                                "rB" = vc_color[2,],
-                                "cB" = vc_color[3,]))
+                                "cB" = vc_color[2,],
+                                "rB" = vc_color[3,]))
 
 
 
