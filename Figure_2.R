@@ -7,7 +7,7 @@ p$VR <- p$resid.vcov
 
 param.df <- data.frame(
   param = c('VA', 'VM', 'VD', 'VR', 'VP'),
-  color = c('#ef476f', '#118ab2', '#ffd166', '#06d6a0', 'grey30'),
+  color = c('#E76F51', '#E9C46A', '#2a9d8f', 'grey', '#118ab2'),
   short = c('G', 'M', 'D', 'R', 'P'),
   title = c(
     'Additive~genetic', 'Maternal~effect', 'Dominance', 'Residual', 'Phenotypic'
