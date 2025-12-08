@@ -1,81 +1,161 @@
-rm(list=ls())
-library('tidyverse')
+rm(list = ls())
+library(tidyverse)
+library(circular)
+
+load("Model_outputs/Model_I_posterior_20250930_0019.rdata")
+p$VR <- p$resid.vcov
+
+param.df <- data.frame(
+  param = c('VA', 'VM', 'VD', 'VR', 'VP'),
+  color = c('#ef476f', '#118ab2', '#ffd166', '#06d6a0', 'grey30'),
+  short = c('G', 'M', 'D', 'R', 'P'),
+  title = c(
+    'Additive~genetic', 'Maternal~effect', 'Dominance', 'Residual', 'Phenotypic'
+  )
+) |> 
+  mutate(
+    pr.gt0 = sapply(
+      param,
+      function(x) round(mean(p[[x]][1, 2, ] > 0), digits = 2)
+    ),
+    label = paste0(
+      'atop(', 
+      title, '~(', short, '),Pr(', short, '[12] > 0) == ', pr.gt0, 
+      ')'
+    ),
+    label = factor(label, levels = label)
+  )
 
 
-# Load data ----
-df_trunk_tail <- readRDS("Data/trunk_tail_data.rds") 
-df_hatch_settle <- readRDS("Data/hatch_settle_data.rds") 
-
-# Prepare data ----
-# trunk - Tail
-# Remove the fixed effects of block, 
-# then calculate residuals, for plotting
-df_trunk_tail <- df_trunk_tail |> 
-  group_by(block) |> 
-  reframe(sire = sire,
-          trunk.resid = trunk - mean(trunk, na.rm=T),
-          tail.resid = tail - mean(tail, na.rm=T))
-
-# Calculate the sire averages
-sire_means_trunk_tail <- df_trunk_tail |> 
-  group_by(sire) |> 
-  summarize(mean.trunk.resid = mean(trunk.resid),
-            mean.tail.resid = mean(tail.resid))
-
-# Hatch - Settle
-# Calculate the family averages
-family_means_hatch_settle <- df_hatch_settle |> 
-  group_by(block, interaction, metric) |> 
-  summarize(mean = mean(outcome)) |> 
-  pivot_wider(names_from = metric,
-              values_from = mean)
-
-# Remove block effects 
-family_means_hatch_settle <- family_means_hatch_settle |> 
-  group_by(block) |> 
-  reframe(hatch.resid = hatching - mean(hatching, na.rm=T),
-          settle.resid = settling - mean(settling, na.rm=T))
-
-# Make plot ----
-panelA <- ggplot() +
-  geom_point(data = df_trunk_tail,
-             aes(x = trunk.resid,
-                 y = tail.resid),
-             alpha = 0.1) +
-  # geom_point(data = sire_means_trunk_tail,
-  #            aes(x = mean.trunk.resid,
-  #                y = mean.tail.resid),
-  #            color="blue",
-  #            alpha = 0.6) +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "grey") +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "grey") +
-  labs(x = "Trunk length\n(residual)",
-       y = "Tail length\n(residual)",
-       title = "a)") +
-  theme_bw()
+# draw random values from multivariate-normal for a posterior sample
+ran_mvnorm <- function(vec) {
+  Sigma <- matrix(vec, nrow = 2, byrow = TRUE)
+  if(!all(eigen(Sigma)$values > 0)) return(NULL)
+  
+  MASS::mvrnorm(100, c(0, 0), Sigma) |> 
+    as.data.frame() 
+}
 
 
-panelB <- ggplot() +
-  geom_point(data = family_means_hatch_settle,
-             aes(x = hatch.resid,
-                 y = settle.resid),
-             alpha = 0.2) +
-  geom_vline(xintercept = 0, linetype = "dashed", color = "grey") +
-  geom_hline(yintercept = 0, linetype = "dashed", color = "grey") +
-  labs(x = "Hatching proportion\n(residual)",
-       y = "Settling proportion\n(residual)",
-       title = "b)") +
-  theme_bw()
+# compute ellipses at selected intervals from random multivariate normal draws
+smrz_matrix <- function(param, p) {
+  # random multivariate normal draws from mean-centered covariance matrices
+  mat <- evolvability::meanStdGMCMC(
+    t(apply(p[[param]], 3, as.vector)),
+    t(p$mean.overall)
+  ) 
+  
+  rads <- apply(mat, 1, function(vec) {
+    eigenvectors <- vec |> 
+      matrix(nrow = 2, byrow = TRUE) |> 
+      eigen() |> 
+      pluck('vectors')
+    # eigenvectors <- ifelse(eigenvectors < 0, eigenvectors * -1, eigenvectors)
+    atan2(eigenvectors[2, 1], eigenvectors[1, 1])
+  })
+  
+  
+  pts <- apply(mat, 1, ran_mvnorm, simplify = FALSE) |> 
+    bind_rows() 
+  mu <- colMeans(pts)
+  sigma <- cov(pts)
+  
+  list(
+    slope.smry = c(
+      median = rads |> 
+        circular::circular(units = 'radians') |> 
+        circular::median.circular() |> 
+        tan(),
+      rads |> 
+        HDInterval::hdi() |> 
+        tan()
+    ) |> 
+      rbind() |> 
+      as.data.frame() |> 
+      mutate(param = param),
+    
+    # ellipses at selected intervals
+    ellipses = lapply(
+      seq(0.05, 0.95, length.out = 10),
+      function(pr) {
+        ellipse::ellipse(sigma, centre = mu, level = pr) |> 
+          as.data.frame() |> 
+          setNames(c('x', 'y')) |> 
+          mutate(pr = pr)
+      }
+    ) |> 
+      bind_rows() |> 
+      mutate(param = param)
+  )
+}
 
+# get ellipses and slope summaries for each parameter
+matrix.smry <- lapply(param.df$param, smrz_matrix, p = p) 
 
-# Save plot ----
-fig2 <- gridExtra::grid.arrange(panelA,
-                                panelB,
-                                nrow = 1,
-                                ncol = 2)
-ggsave("Figures and Tables/Figure 2.pdf", 
-       plot = fig2, 
-       height = 2.5, 
-       width = 5)
-dev.off()
+# extract ellipses
+ellipses <- matrix.smry |> 
+  lapply(function(x) x$ellipses) |> 
+  bind_rows() |> 
+  left_join(select(param.df, param, label), by = 'param') |> 
+  arrange(desc(pr))
 
+# extract slope summaries
+slope.smry <- lapply(matrix.smry, function(x) x$slope.smry) |> 
+  bind_rows() |> 
+  mutate(intercept = 0) |> 
+  left_join(select(param.df, param, label), by = 'param')
+
+# axis limits to make figure square
+lims <- unlist(ellipses[, c('x', 'y')]) |> 
+  pretty() |> 
+  range()
+
+p1 <- ellipses |> 
+  ggplot() +
+  geom_hline(yintercept = 0, linewidth = 1, color = "gray", alpha = 0.6) +
+  geom_vline(xintercept = 0, linewidth = 1, color = "gray", alpha = 0.6) +
+  geom_polygon(
+    aes(x, y, color = label, fill = label, alpha = 1 - pr, group = pr),
+    linewidth = 0.1
+  ) +
+  geom_abline(
+    aes(slope = lower, intercept = intercept, color = label), 
+    data = slope.smry,
+    linetype = 'dashed',
+    linewidth = 1
+  ) +
+  geom_abline(
+    aes(slope = upper, intercept = intercept, color = label), 
+    data = slope.smry,
+    linetype = 'dashed',
+    linewidth = 1
+  ) +  
+  geom_abline(
+    aes(slope = median, intercept = intercept, color = label), 
+    data = slope.smry,
+    linewidth = 1
+  ) +
+  scale_color_manual(
+    values = param.df |> 
+      select(label, color) |> 
+      deframe()
+  ) +
+  scale_fill_manual(
+    values = param.df |> 
+      select(label, color) |> 
+      deframe()
+  ) +
+  coord_equal() +
+  labs(x = "Trunk length (mean standardized)", y = "Tail length (mean standardized)") +
+  lims(x = lims, y = lims) +
+  facet_wrap(~label, labeller = label_parsed) +
+  theme_minimal(base_size = 12) +
+  theme(legend.position = 'none')
+p1
+
+ggsave(
+  "Figures and Tables/Figure 2.pdf",
+  plot = p1,
+  height = 5,
+  width = 5
+)
