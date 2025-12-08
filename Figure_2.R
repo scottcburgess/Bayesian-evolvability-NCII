@@ -122,13 +122,13 @@ p1 <- ellipses |>
     aes(slope = lower, intercept = intercept, color = label), 
     data = slope.smry,
     linetype = 'dashed',
-    linewidth = 1
+    linewidth = 0.4
   ) +
   geom_abline(
     aes(slope = upper, intercept = intercept, color = label), 
     data = slope.smry,
     linetype = 'dashed',
-    linewidth = 1
+    linewidth = 0.4
   ) +  
   geom_abline(
     aes(slope = median, intercept = intercept, color = label), 
