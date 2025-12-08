@@ -79,6 +79,13 @@ comp.smry(var.obs$VD$var.a.obs)
 plot.metric(var.obs$VD$var.a.obs)
 ```
 
+## V~R~ on the observed scale    
+```{r}
+# p$VR is latent scale variance
+comp.smry(var.obs$VR$var.obs)
+plot.metric(var.obs$VR$var.obs)
+```
+
 ## V~P~ on the observed scale    
 ```{r}
 # p$VP is latent scale variance
