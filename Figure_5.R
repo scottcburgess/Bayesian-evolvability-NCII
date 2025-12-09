@@ -12,14 +12,14 @@ load("Model_outputs/Model_I_posterior_20250930_0019.rdata")
 panelA <- e.params_beta |>
   filter(Beta_index == "1") |>
   select(e, c, r) |>
-  setNames(c('eB', 'cB', 'rB')) |> 
+  setNames(betas) |> 
   pivot_longer(
     cols = c(eB, cB, rB),
     names_to = "param",
     values_to = "value"
   ) |>
   mutate(
-    param = factor(param, levels = c("eB", "cB", "rB")),
+    param = factor(param, levels = betas),
     value = value * 100
   ) |> 
   plot_func(
@@ -35,14 +35,14 @@ panelA <- e.params_beta |>
 panelB <- e.params_beta |>
   filter(Beta_index == "2") |>
   select(e, c, r) |>
-  setNames(c('eB', 'cB', 'rB')) |> 
+  setNames(betas) |> 
   pivot_longer(
     cols = c(eB, cB, rB),
     names_to = "param",
     values_to = "value"
   ) |>
   mutate(
-    param = factor(param, levels = c("eB", "cB", "rB")),
+    param = factor(param, levels = betas),
     value = value * 100
   ) |> 
   plot_func(
@@ -58,14 +58,14 @@ panelB <- e.params_beta |>
 panelC <- e.params_beta |>
   filter(Beta_index == "3") |>
   select(e, c, r) |>
-  setNames(c('eB', 'cB', 'rB')) |> 
+  setNames(betas) |> 
   pivot_longer(
     cols = c(eB, cB, rB),
     names_to = "param",
     values_to = "value"
   ) |>
   mutate(
-    param = factor(param, levels = c("eB", "cB", "rB")),
+    param = factor(param, levels = betas),
     value = value * 100
   ) |> 
   plot_func(

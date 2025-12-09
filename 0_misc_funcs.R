@@ -75,7 +75,7 @@ param_df <- data.frame(
 
 vcov_params <- c('VA', 'VM', 'VD', 'VR')
 
-betas <- c('eB', 'rB', 'cB')
+betas <- c('eB', 'cB', 'rB')
 
 vc_colors <- param_df |> 
   select(param, color) |> 
