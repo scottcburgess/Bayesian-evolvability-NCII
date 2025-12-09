@@ -84,7 +84,6 @@ fig5 <- gridExtra::grid.arrange(
 )
 fig5
 
-
 ggsave(
   "Figures and Tables/Figure 5.pdf", 
   plot = fig5, 
