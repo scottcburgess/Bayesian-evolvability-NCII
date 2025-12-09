@@ -142,7 +142,8 @@ dimnames(p$sire.vcov)[1:2] <-
 p$VA <- 4 * p$sire.vcov
 p$VM <- p$dam.vcov - p$sire.vcov
 p$VD <- 4 * p$interaction.vcov
-p$VP <- p$VA + p$VM + p$VD + p$resid.vcov
+p$VR <- p$resid.vcov
+p$VP <- p$VA + p$VM + p$VD + p$VR
 p$H <- p$VA / p$VP
 p$E <- rbind(
   trunk = p$VA[1, 1, ] / (p$mean.overall[1, ] ^ 2),

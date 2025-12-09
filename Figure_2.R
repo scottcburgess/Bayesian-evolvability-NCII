@@ -1,18 +1,10 @@
 rm(list = ls())
 library(tidyverse)
-library(circular)
+source('0_misc_funcs.R')
 
 load("Model_outputs/Model_I_posterior_20250930_0019.rdata")
-p$VR <- p$resid.vcov
 
-param.df <- data.frame(
-  param = c('VA', 'VM', 'VD', 'VR', 'VP'),
-  color = c('#E76F51', '#E9C46A', '#2a9d8f', 'grey', '#118ab2'),
-  short = c('G', 'M', 'D', 'R', 'P'),
-  title = c(
-    'Additive~genetic', 'Maternal~effect', 'Dominance', 'Residual', 'Phenotypic'
-  )
-) |> 
+param.df <- param_df |> 
   mutate(
     pr.gt0 = sapply(
       param,
@@ -50,7 +42,6 @@ smrz_matrix <- function(param, p) {
       matrix(nrow = 2, byrow = TRUE) |> 
       eigen() |> 
       pluck('vectors')
-    # eigenvectors <- ifelse(eigenvectors < 0, eigenvectors * -1, eigenvectors)
     atan2(eigenvectors[2, 1], eigenvectors[1, 1])
   })
   
@@ -90,7 +81,7 @@ smrz_matrix <- function(param, p) {
 }
 
 # get ellipses and slope summaries for each parameter
-matrix.smry <- lapply(param.df$param, smrz_matrix, p = p) 
+matrix.smry <- lapply(c(vcov_params, 'VP'), smrz_matrix, p = p) 
 
 # extract ellipses
 ellipses <- matrix.smry |> 
@@ -110,7 +101,7 @@ lims <- unlist(ellipses[, c('x', 'y')]) |>
   pretty() |> 
   range()
 
-p1 <- ellipses |> 
+fig2 <- ellipses |> 
   ggplot() +
   geom_hline(yintercept = 0, linewidth = 1, color = "gray", alpha = 0.6) +
   geom_vline(xintercept = 0, linewidth = 1, color = "gray", alpha = 0.6) +
@@ -133,7 +124,7 @@ p1 <- ellipses |>
   geom_abline(
     aes(slope = median, intercept = intercept, color = label), 
     data = slope.smry,
-    linewidth = 1
+    linewidth = 0.6
   ) +
   scale_color_manual(
     values = param.df |> 
@@ -146,16 +137,23 @@ p1 <- ellipses |>
       deframe()
   ) +
   coord_equal() +
-  labs(x = "Trunk length (mean standardized)", y = "Tail length (mean standardized)") +
+  labs(
+    x = "Trunk length (mean standardized)",
+    y = "Tail length (mean standardized)"
+  ) +
   lims(x = lims, y = lims) +
   facet_wrap(~label, labeller = label_parsed) +
   theme_minimal(base_size = 12) +
-  theme(legend.position = 'none')
-p1
+  theme(
+    axis.title.x = element_text(margin = margin(t = 10)),
+    axis.title.y = element_text(margin = margin(r = 10)),
+    legend.position = 'none'
+  )
+fig2
 
 ggsave(
   "Figures and Tables/Figure 2.pdf",
-  plot = p1,
+  plot = fig2,
   height = 5,
   width = 5
 )

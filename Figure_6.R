@@ -3,33 +3,32 @@ library('tidyverse')
 library('ggridges')
 source('0_misc_funcs.R')
 
-# options(scipen = 999)
-
 
 # load and prepare ----
 load("Model_outputs/Model_IV_posterior_20251001_0640.rdata") 
 
-
 # Trunk selection differential  
-cov_trunk_p <- vcv.obs$vcv.G.obs[1,3,]
+cov_trunk_p <- vcv.obs$vcv.G.obs[1, 3, ]
 mean_p <- vcv.obs$mean.obs[, "Settling"]
 cov_trunk_p_relative <- cov_trunk_p / mean_p # selection differential
 
 # Tail selection differential
-cov_tail_p <- vcv.obs$vcv.G.obs[2,3,]
+cov_tail_p <- vcv.obs$vcv.G.obs[2, 3, ]
 mean_p <- vcv.obs$mean.obs[, "Settling"]
 cov_tail_p_relative <- cov_tail_p / mean_p # selection differential
 
 # Extract means
-mean_z <- rbind(p$mean.overall[1,], p$mean.overall[2,])
+mean_z <- rbind(p$mean.overall[1, ], p$mean.overall[2, ])
 
 # Compute trunk and tail evolvability
 sg <- rbind(cov_trunk_p_relative, cov_tail_p_relative)  # 2 x n_iter
 
 n_iter <- dim(sg)[2]
 
-E_matrix <- matrix(NA, nrow = 2, ncol = n_iter,
-                   dimnames = list(c("Trunk", "Tail"), NULL))
+E_matrix <- matrix(
+  NA, nrow = 2, ncol = n_iter,
+  dimnames = list(c("Trunk", "Tail"), NULL)
+)
 
 for (i in seq_len(n_iter)) {
   S_vec <- sg[, i]
@@ -39,115 +38,67 @@ for (i in seq_len(n_iter)) {
 
 
 # Make Figure ----
-
-## Plotting parameters ----
-brksA<- seq(-0.5,1,0.1)
-brksB<- seq(-0.5,1,0.1)
-lmtsA <- c(-0.5,1)
-lmtsB <- c(-0.5,1)
-x_text_size <- 5
-y_text_size <- 7
-axis_label_size <- 7
-title_label_size <- 7
-point_size <- 2
-segment_size <- 0.5
-alp <- 0.4
+plot_fig6 <- function(df, title) {
+  smry <- df |> 
+    pull('value') |> 
+    vecSmry() |> 
+    t() |> 
+    as.data.frame() |> 
+    mutate(y = 0)
+  
+  df |> 
+    ggplot(aes(x = value)) +
+    geom_vline(xintercept = 0, color = "grey50") +
+    geom_density(
+      alpha = 0.4,
+      fill = 'gray30',
+      linewidth = 0.1
+    ) + 
+    geom_segment(
+      aes(x = lower.hdi, xend = upper.hdi),
+      data = smry, 
+      y = 0,
+      linetype = "solid", 
+      linewidth = 0.5
+    ) +
+    geom_point(
+      aes(x = mode), 
+      data = smry,
+      y = 0, 
+      size = 2
+    ) +
+    labs(title = title) +
+    scale_x_continuous(breaks = seq(-0.5, 1, 0.1), limits = c(-0.5, 1)) +
+    default_theme +
+    theme(axis.text.x = element_text(size = 5, angle = 45, hjust = 1))
+}
 
 
 ## Panel A ----
-d <- E_matrix['Trunk', , drop = F] * 100
-
-df <- data.frame(
-  sample = rownames(d),       
-  value = as.numeric(d))
-
-summaries <- as.data.frame(t(vecSmry(df$value)))
-summaries$y <- 0
-
-panelA <- ggplot(df, 
-                 aes(x = value)) +
-  geom_vline(xintercept = 0, linetype = "dotted", color = "grey50") +
-  geom_density(alpha = alp,
-               fill = 'lightgrey',
-               linewidth = 0.1) +
-  labs(x = "% change per generation",
-       y = "Probability density",
-       title = "a) Trunk length") +
-  theme_ridges() +
-  theme(legend.position = "none",
-        axis.title.x = element_text(hjust = 0.5),
-        axis.title.y = element_text(hjust = 0.5),
-        axis.text.x = element_text(size = x_text_size, angle = 45),
-        axis.text.y = element_text(size = y_text_size),
-        axis.title = element_text(size = axis_label_size),
-        plot.title = element_text(size=title_label_size, face = "plain", hjust = 0)) +
-  geom_point(data = summaries, 
-             aes(x = mode,
-                 y = y),
-             color = "grey30",
-             size = point_size) +
-  geom_segment(data = summaries, 
-               aes(x = lower.hdi, 
-                   xend = upper.hdi,
-                   y = y,
-                   yend = y),
-               color = "grey30",
-               linetype = "solid", 
-               size = segment_size) +
-  scale_x_continuous(breaks = brksA, limits = lmtsA) 
-
+panelA <- plot_fig6(
+  data.frame(value = E_matrix['Trunk', ] * 100),
+  'a) Trunk length'
+)
 
 
 ## Panel B ----
-d <- E_matrix['Tail', , drop = F] * 100
-
-df <- data.frame(
-  sample = rownames(d),       
-  value = as.numeric(d))
-
-summaries <- as.data.frame(t(vecSmry(df$value)))
-summaries$y <- 0
-
-panelB <- ggplot(df, 
-                 aes(x = value)) +
-  geom_vline(xintercept = 0, linetype = "dotted", color = "grey50") +
-  geom_density(alpha = alp,
-               fill = 'lightgrey',
-               linewidth = 0.1) +
-  labs(x = "% change per generation",
-       y = "Probability density",
-       title = "b) Tail length") +
-  theme_ridges() +
-  theme(legend.position = "none",
-        axis.title.x = element_text(hjust = 0.5),
-        axis.title.y = element_text(hjust = 0.5),
-        axis.text.x = element_text(size = x_text_size, angle = 45),
-        axis.text.y = element_text(size = y_text_size),
-        axis.title = element_text(size = axis_label_size),
-        plot.title = element_text(size=title_label_size, face = "plain", hjust = 0)) +
-  geom_point(data = summaries, 
-             aes(x = mode,
-                 y = y),
-             color = "grey30",
-             size = point_size) +
-  geom_segment(data = summaries, 
-               aes(x = lower.hdi, 
-                   xend = upper.hdi,
-                   y = y,
-                   yend = y),
-               color = "grey30",
-               linetype = "solid", 
-               size = segment_size) +
-  scale_x_continuous(breaks = brksB, limits = lmtsB) 
+panelB <- plot_fig6(
+  data.frame(value = E_matrix['Tail', ] * 100),
+  'b) Tail length'
+)
 
 
+fig6 <- gridExtra::grid.arrange(
+  panelA, panelB, nrow = 1,
+  bottom = '% change per generation',
+  left = 'Probability density'
+)
+fig6
 
-fig6 <- gridExtra::grid.arrange(panelA,
-                                panelB,
-                                nrow = 1,
-                                ncol = 2)
-ggsave("Figures and Tables/Figure 6.pdf", 
-       plot = fig6, 
-       height = 2, 
-       width = 5)
-dev.off()
+
+ggsave(
+  "Figures and Tables/Figure 6.pdf", 
+  plot = fig6, 
+  height = 3, 
+  width = 6
+)
