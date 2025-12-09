@@ -42,7 +42,7 @@ d <- e.params_beta |>
     cols = c(e, r, c),
     names_to = "name",
     values_to = "value") |>
-  mutate(name = factor(name, levels = c("e","r","c")))
+  mutate(name = factor(name, levels = c("e","c","r")))
 
 summaries <- d |>
   group_by(name) |>
@@ -86,24 +86,24 @@ panelA <- ggplot(d,
                      limits = lmtsA,
                      labels = ~.x*100) +
   scale_fill_manual(values = c("e" = vc_color[1,], 
-                               "r" = vc_color[2,],
-                               "c" = vc_color[3,])) +
+                               "c" = vc_color[2,],
+                               "r" = vc_color[3,])) +
   scale_y_discrete(labels = c("e" = expression(paste("e(",beta,")")), 
-                              "r" = expression(paste("r(",beta,")")),
-                              "c" = expression(paste("c(",beta,")")))) + 
+                              "c" = expression(paste("c(",beta,")")),
+                              "r" = expression(paste("r(",beta,")")))) + 
   scale_color_manual(values = c("e" = vc_color[1,], 
-                                "r" = vc_color[2,],
-                                "c" = vc_color[3,]))
+                                "c" = vc_color[2,],
+                                "r" = vc_color[3,]))
 
 ## Panel B ----
 d <- e.params_beta |>
   filter(Beta_index == "2") |>
-  select("e", "r", "c") |>
+  select("e", "c", "r") |>
   pivot_longer(
     cols = c(e, r, c),
     names_to = "name",
     values_to = "value") |>
-  mutate(name = factor(name, levels = c("e","r","c")))
+  mutate(name = factor(name, levels = c("e","c","r")))
 
 summaries <- d |>
   group_by(name) |>
@@ -147,24 +147,24 @@ panelB <- ggplot(d,
                      limits = lmtsB,
                      labels = ~.x*100) +
   scale_fill_manual(values = c("e" = vc_color[1,], 
-                               "r" = vc_color[2,],
-                               "c" = vc_color[3,])) +
+                               "c" = vc_color[2,],
+                               "r" = vc_color[3,])) +
   scale_y_discrete(labels = c("e" = expression(paste("e(",beta,")")), 
-                              "r" = expression(paste("r(",beta,")")),
-                              "c" = expression(paste("c(",beta,")")))) + 
+                              "c" = expression(paste("c(",beta,")")),
+                              "r" = expression(paste("r(",beta,")")))) + 
   scale_color_manual(values = c("e" = vc_color[1,], 
-                                "r" = vc_color[2,],
-                                "c" = vc_color[3,]))
+                                "c" = vc_color[2,],
+                                "r" = vc_color[3,]))
 
 ## Panel C ----
 d <- e.params_beta |>
   filter(Beta_index == "3") |>
-  select("e", "r", "c") |>
+  select("e", "c", "r") |>
   pivot_longer(
     cols = c(e, r, c),
     names_to = "name",
     values_to = "value") |>
-  mutate(name = factor(name, levels = c("e","r","c")))
+  mutate(name = factor(name, levels = c("e","c","r")))
 
 summaries <- d |>
   group_by(name) |>
@@ -208,14 +208,14 @@ panelC <- ggplot(d,
                      limits = lmtsC,
                      labels = ~.x*100) +
   scale_fill_manual(values = c("e" = vc_color[1,], 
-                               "r" = vc_color[2,],
-                               "c" = vc_color[3,])) +
+                               "c" = vc_color[2,],
+                               "r" = vc_color[3,])) +
   scale_y_discrete(labels = c("e" = expression(paste("e(",beta,")")), 
-                              "r" = expression(paste("r(",beta,")")),
-                              "c" = expression(paste("c(",beta,")")))) + 
+                              "c" = expression(paste("c(",beta,")")),
+                              "r" = expression(paste("r(",beta,")")))) + 
   scale_color_manual(values = c("e" = vc_color[1,], 
-                                "r" = vc_color[2,],
-                                "c" = vc_color[3,]))
+                                "c" = vc_color[2,],
+                                "r" = vc_color[3,]))
 
 
 fig5 <- gridExtra::grid.arrange(panelA,
