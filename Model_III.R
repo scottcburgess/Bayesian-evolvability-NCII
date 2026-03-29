@@ -3,204 +3,305 @@ library(tidyverse)
 library(runjags)
 
 # MCMC parameters
-chains <- 50
+chains <- 6 #50
 adapt <- 100
-burnin <- 80000
-total.sample <- 8000
-thin <- 20000
+burnin <- 1000 #100000
+total.sample <- 1000 #8000 
+thin <- 1 #5000
 
 # Load data
-df <- readRDS('Data/hatch_settle_data.rds') 
+trunk_tail.df <- readRDS('Data/trunk_tail_data.rds') 
+hatch_settle.df <- readRDS('Data/hatch_settle_data.rds') 
 
-# Only keep blocks with both hatching and settling data
-blocks.to.keep <- table(block = df$block, metric = df$metric) |> 
-  as.data.frame() |> 
-  filter(Freq > 0) |> 
+
+blocks <- hatch_settle.df |> 
   group_by(block) |> 
-  summarize(n = n(), .groups = 'drop') |> 
-  filter(n == 2) |> 
+  summarize(
+    n.hatch = sum(metric == 'hatching'),
+    n.settle = sum(metric == 'settling'),
+    .groups = 'drop'
+  ) |> 
+  filter(n.hatch > 0 & n.settle > 0) |> 
   pull(block) |> 
-  as.character() |> 
-  as.integer()
-df <- filter(df, block %in% blocks.to.keep)
+  unique()
+
+interactions <- intersect(trunk_tail.df$interaction, hatch_settle.df$interaction)
+
+trunk_tail.df <- trunk_tail.df |> 
+  filter(interaction %in% interactions & block %in% blocks)
+hatch_settle.df <- hatch_settle.df |> 
+  filter(interaction %in% interactions & block %in% blocks)
+
+hs.df <- hatch_settle.df |> 
+  mutate(
+    block = as.numeric(factor(block)),
+    sire = as.numeric(factor(sire)),
+    dam = as.numeric(factor(dam)),
+    interaction = as.numeric(factor(interaction))
+  )
+hatch.df <- filter(hs.df, metric == 'hatching')
+settle.df <- filter(hs.df, metric == 'settling')
+
+
+# Summarize hatching and settling rate across blocks
+hatch_settle.df |> 
+  group_by(interaction, metric) |> 
+  summarize(pct = mean(outcome, na.rm = TRUE), .groups = 'drop') |> 
+  pivot_wider(names_from = 'metric', values_from = 'pct') |> 
+  as.data.frame()
+
+hatch_settle.df |> 
+  group_by(block, metric) |> 
+  summarize(
+    n = n(),
+    n.settle = sum(outcome), 
+    pr.settle = n.settle / n,
+    .groups = 'drop'
+  ) |> 
+  mutate(
+    a = n.settle + 1,
+    b = n - n.settle + 1,
+    lower = qbeta(0.0001, a, b),
+    upper = qbeta(0.9999, a, b)
+  ) |> 
+  as.data.frame()
+
 
 # Run model
 post <- run.jags(
   data = list(
-    n.blocks = length(unique(df$block)),
-    n.sires = length(unique(df$sire)),
-    n.dams = length(unique(df$dam)),
-    n.interactions = length(unique(df$interaction)),
-    n.larvae = nrow(df),
-    block = as.numeric(factor(df$block)),
-    sire = as.numeric(factor(df$sire)),
-    dam = as.numeric(factor(df$dam)),
-    interaction = as.numeric(factor(df$interaction)),
-    metric = as.numeric(factor(df$metric)),
-    outcome1 = df$outcome,
-    outcome2 = df$outcome,
-    outcome3 = df$outcome
+    n.blocks = length(unique(trunk_tail.df$block)),
+    n.sires = length(unique(trunk_tail.df$sire)),
+    n.dams = length(unique(trunk_tail.df$dam)),
+    n.interactions = length(unique(trunk_tail.df$interaction)),
+    n.larvae = nrow(trunk_tail.df),
+    block = as.numeric(factor(trunk_tail.df$block)),
+    sire = as.numeric(factor(trunk_tail.df$sire)),
+    dam = as.numeric(factor(trunk_tail.df$dam)),
+    interaction = as.numeric(factor(trunk_tail.df$interaction)),
+    block.mean.range = cbind(
+      round(range(trunk_tail.df$trunk)), 
+      round(range(trunk_tail.df$tail)),
+      qlogis(c(0.2, 0.95))
+    ),
+    length1 = cbind(trunk_tail.df$trunk, trunk_tail.df$tail),
+    length2 = cbind(trunk_tail.df$trunk, trunk_tail.df$tail),
+    length3 = cbind(trunk_tail.df$trunk, trunk_tail.df$tail),
+    n.hatch = nrow(hatch.df),
+    hatch.sire = hatch.df$sire,
+    hatch = hatch.df$outcome,
+    n.settle = nrow(settle.df),
+    settle.block = settle.df$block,
+    settle.sire = settle.df$sire,
+    settle.dam = settle.df$dam,
+    settle.interaction = settle.df$interaction,
+    settle1 = settle.df$outcome,    
+    settle2 = settle.df$outcome, 
+    settle3 = settle.df$outcome,
+    i = c(1, 1, 2),
+    j = c(2, 3, 3)
   ),
   model = 'model {
-    for(m in 1:2) { 
-      # ---- prior for overall probability of outcome for computing evolvability ----
-      pr.overall[m] ~ dunif(0, 1)    
-    
-      # ---- prior for block and effect means ----
+    # for each t-trait...
+    for(t in 1:3) {  
+      # ---- prior for overall mean and variance ----
+      mean.overall[t] ~ dunif(block.mean.range[1, t], block.mean.range[2, t])
+      var.overall[t] ~ dunif(0, 1e5)
+      
+      # ---- priors for block and effect means ----
       for(b in 1:n.blocks) {
-        block.mean.pr[b, m] ~ dunif(0, 1)
-        block.mean[b, m] <- logit(block.mean.pr[b, m])
-        
-        # pior for block probability of outcome for computing heritability
-        pr.block[b, m] ~ dunif(0, 1)
+        overall.block.mean[b, t] ~ dunif(block.mean.range[1, t], block.mean.range[2, t])
+        overall.block.var[b, t] ~ dunif(0, 1e5)
+        block.mean[b, t] ~ dunif(block.mean.range[1, t], block.mean.range[2, t])
       }
-      sire.mean[m] ~ dnorm(0, 1e-6)
-      dam.mean[m] ~ dnorm(0, 1e-6)
-      interaction.mean[m] ~ dnorm(0, 1e-6)
+      sire.mean[t] ~ dnorm(0, 1e-5)
+      dam.mean[t] ~ dnorm(0, 1e-5)
+      interaction.mean[t] ~ dnorm(0, 1e-5)
       
       # ---- prior for variances ----
-      sire.vcov[m, m] ~ dunif(0, 1000)
-      dam.vcov[m, m] ~ dunif(0, 1000)
-      interaction.vcov[m, m] ~ dunif(0, 1000)
+      sire.vcov[t, t] ~ dunif(0, 1e3)
+      dam.vcov[t, t] ~ dunif(0, 1e3)
+      interaction.vcov[t, t] ~ dunif(0, 1e3)
+      resid.vcov[t, t] ~ dunif(0, 1e3)
     }
     
-    # ---- prior for sire covariance ---
+    # ---- correlation priors for covariances ----
     sire.corr ~ dunif(-1, 1)
-    sire.vcov[1, 2] <- sire.corr * sqrt(sire.vcov[1, 1] * sire.vcov[2, 2])
-    sire.vcov[2, 1] <- sire.vcov[1, 2]
-    
-    # ---- prior for dam covariance ----
     dam.corr ~ dunif(-1, 1)
-    dam.vcov[1, 2] <- dam.corr * sqrt(dam.vcov[1, 1] * dam.vcov[2, 2])
-    dam.vcov[2, 1] <- dam.vcov[1, 2]
-    
-    # ---- prior for interaction covariance ----
     interaction.corr ~ dunif(-1, 1)
-    interaction.vcov[1, 2] <- interaction.corr * sqrt(interaction.vcov[1, 1] * interaction.vcov[2, 2])
-    interaction.vcov[2, 1] <- interaction.vcov[1, 2]
+    resid.corr ~ dunif(-1, 1)
     
-    # ---- prior for sire effect (for each sire) ----
-    for(s in 1:n.sires) {
-      sire.eff[s, 1:2] ~ dmnorm.vcov(sire.mean, sire.vcov)
+    # ---- construct variance/covariance matrices ----
+    for(k in 1:3) {
+      sire.vcov[i[k], j[k]] <- sire.corr * sqrt(sire.vcov[i[k], i[k]] * sire.vcov[j[k], j[k]])
+      sire.vcov[j[k], i[k]] <- sire.vcov[i[k], j[k]]
+      dam.vcov[i[k], j[k]]  <- dam.corr * sqrt(dam.vcov[i[k], i[k]] * dam.vcov[j[k], j[k]])
+      dam.vcov[j[k], i[k]] <- dam.vcov[i[k], j[k]]
+      interaction.vcov[i[k], j[k]] <- interaction.corr * sqrt(interaction.vcov[i[k], i[k]] * interaction.vcov[j[k], j[k]])
+      interaction.vcov[j[k], i[k]] <- interaction.vcov[i[k], j[k]]
+      resid.vcov[i[k], j[k]] <- resid.corr * sqrt(resid.vcov[i[k], i[k]] * resid.vcov[j[k], j[k]])
+      resid.vcov[j[k], i[k]] <- resid.vcov[i[k], j[k]]
     }
     
-    # ---- priors for dam effect (for each dam) ----
+    # ---- prior for additive sire effect (for each sire) ----
+    for(s in 1:n.sires) {
+      sire.eff[s, 1:3] ~ dmnorm.vcov(sire.mean, sire.vcov)
+      sire.eff.hatch[s] ~ dnorm(0, 1000)
+      
+      # effect on probability of settling for each sire
+      logit(p.settle.sire[s]) <- sire.eff.hatch[s] + sire.eff[s, 3] 
+    }
+    
+    # ---- prior for maternal effect (for each dam) ----
     for(d in 1:n.dams) {
-      dam.eff[d, 1:2] ~ dmnorm.vcov(dam.mean, dam.vcov)
+      dam.eff[d, 1:3] ~ dmnorm.vcov(dam.mean, dam.vcov)
     }
     
     # ---- prior for interaction effect (for each sire x dam interaction) ----
-    for(i in 1:n.interactions) {
-      interaction.eff[i, 1:2] ~ dmnorm.vcov(interaction.mean, interaction.vcov)
+    for(int in 1:n.interactions) {
+      interaction.eff[int, 1:3] ~ dmnorm.vcov(interaction.mean, interaction.vcov)
     }
     
-    # ---- likelihood ----
+    # ---- trunk/tail likelihood ----
     for(l in 1:n.larvae) {
-      outcome1[l] ~ dbern(pr.overall[metric[l]])
-      outcome2[l] ~ dbern(pr.block[block[l], metric[l]])
-      
-      logit(pr[l]) <- block.mean[block[l], metric[l]] + 
-         sire.eff[sire[l], metric[l]] + 
-         dam.eff[dam[l], metric[l]] + 
-         interaction.eff[interaction[l], metric[l]] 
-      outcome3[l] ~ dbern(pr[l])
+      for(t in 1:2) {        
+        # likelihood of overall mean for computing evolvability
+        length1[l, t] ~ dnorm(mean.overall[t], 1 / var.overall[t])
+        length2[l, t] ~ dnorm(overall.block.mean[block[l], t], 1 / overall.block.var[block[l], t])
+        
+        # expected mean for the l-th larvae and t-th trait
+        length.mu[l, t] <- block.mean[block[l], t] + 
+          sire.eff[sire[l], t] + 
+          dam.eff[dam[l], t] +
+          interaction.eff[interaction[l], t]
+      }
+      # likelihood of l-th larvae for both traits from multivariate normal
+      length3[l, ] ~ dmnorm.vcov(length.mu[l, ], resid.vcov[1:2, 1:2])
       
       # draw for posterior predictive check
-      outcome.ppd[l] ~ dbern(pr[l])
+      length.ppd[l, 1:2] ~ dmnorm.vcov(length.mu[l, ], resid.vcov[1:2, 1:2])
+    }
+    
+    # ---- likelihood of hatching ----
+    for(h in 1:n.hatch) {    
+      # prior on non-sire effects 
+      non.sire.eff.hatch[h] ~ dnorm(0, 10000)
+      
+      # linear model to compute probability of hatching 
+      logit(pr.hatch[h]) <- non.sire.eff.hatch[h] +
+        sire.eff.hatch[hatch.sire[h]] 
+        
+      hatch[h] ~ dbern(pr.hatch[h])
+    }
+    
+    # ---- likelihood of settling given hatching ----
+    for(s in 1:n.settle) {
+      # settling block mean is on logit scale, so must take inverse-logit for bernoulli likelihood
+      settle1[s] ~ dbern(ilogit(mean.overall[3]))
+      settle2[s] ~ dbern(ilogit(overall.block.mean[settle.block[s], 3]))
+      
+      # linear model to compute probability of settling given hatching
+      logit(pr.settle.hatch[s]) <- block.mean[settle.block[s], 3] +
+        sire.eff[settle.sire[s], 3] +
+        dam.eff[settle.dam[s], 3] +
+        interaction.eff[settle.interaction[s], 3]
+        
+      # probability of settling given hatching likelihood
+      settle3[s] ~ dbern(pr.settle.hatch[s])
+      
+      # draw for posterior predictive check
+      settle.ppd[s] ~ dbern(pr.settle.hatch[s])
     }
   }',
   monitor = c(
-    'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov',
-    'pr.overall', 'pr.block', 'outcome.ppd'
+    'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 
+    'resid.vcov', 'overall.block.mean', 'mean.overall', 
+    'length.ppd', 'settle.ppd', 'sire.eff', 'p.settle.sire'
   ), 
   inits = function() list(
     .RNG.name = 'lecuyer::RngStream',
     .RNG.seed = sample(1:9999, 1)
   ),
   modules = c('glm', 'lecuyer'),
-  summarise = FALSE,
   n.chains = chains,
   adapt = adapt,
   burnin = burnin,
   sample = ceiling(total.sample / chains),
   thin = thin,
-  method = 'parallel'
+  method = 'parallel',
+  summarise = FALSE
 )
 end <- Sys.time()
 elapsed <- swfscMisc::autoUnits(post$timetaken)
 
 # Extract posterior to list of arrays - p
 p <- swfscMisc::runjags2list(post)
-dimnames(p$pr.overall)[[1]] <- 
-  dimnames(p$pr.block)[[2]] <- c('Hatching', 'Settling')
+dimnames(p$overall.block.mean)[[2]] <- 
+  dimnames(p$sire.eff)[[2]] <- c('Trunk', 'Tail', 'Settling')
+dimnames(p$length.ppd)[[2]] <- c('Trunk', 'Tail')
 dimnames(p$sire.vcov)[1:2] <-
   dimnames(p$dam.vcov)[1:2] <-
   dimnames(p$interaction.vcov)[1:2] <-
-  list(dimnames(p$pr.overall)[[1]], dimnames(p$pr.overall)[[1]])
+  dimnames(p$resid.vcov)[1:2] <- 
+  list(dimnames(p$overall.block.mean)[[2]], dimnames(p$overall.block.mean)[[2]])
+
+
+# Hardcode settling resid.vcov off-diag to 0 and diag to 1
+p$resid.vcov['Settling', , ] <- p$resid.vcov[, 'Settling', ] <- 0
+p$resid.vcov['Settling', 'Settling', ] <- 1
+
 
 # Add QG metrics to list
 p$VA <- 4 * p$sire.vcov
 p$VM <- p$dam.vcov - p$sire.vcov
 p$VD <- 4 * p$interaction.vcov
-p$VP <- p$VA + p$VM + p$VD
-
-# Compute heritability and evolvability based on deVillemereuil et al 2016
-qgparams.post <- sapply(dimnames(p$pr.overall)[[1]], function(m) {
-  parallel::mclapply(1:dim(p$VA)[3], function(i) {
-    QGglmm::QGparams(
-      var.a = p$VA[m, m, i],
-      var.p = p$VP[m, m, i],
-      predict = qlogis(p$pr.block[, m, i]),
-      model = 'binom1.logit',
-      verbose = FALSE
-    )
-  }, mc.cores = 14) |> 
-    bind_rows() |> 
-    mutate(E = var.a.obs / (p$pr.overall[m, ] ^ 2))
-}, simplify = FALSE)
-
-p$H <- t(sapply(qgparams.post, function(x) x$h2.obs))
-p$E <- t(sapply(qgparams.post, function(x) x$E))
+p$VP <- p$VA + p$VM + p$VD + p$resid.vcov
+p$H <- p$VA / p$VP
 
 
 # Use QGglmm to extract full variance/covariance matrix on observed scale
-convertVCVscale <- function(metric, p) {
-  vcv <- parallel::mclapply(1:dim(p[[metric]])[3], function(i) {
-    QGglmm::QGmvparams(
-      vcv.G = p[[metric]][, , i],
-      vcv.P = p$VP[, , i],
-      predict = qlogis(p$pr.block[, , i]),
-      models = c('binom1.logit', 'binom1.logit'),
-      verbose = FALSE
-    )
-  }, mc.cores = 10) |> 
-    purrr::list_transpose()
-  
-  sapply(vcv, function(x) {
-    if(is.null(dim(x[[1]]))) {
-      x <- do.call(rbind, x)
-      colnames(x) <- dimnames(p[[metric]])[[1]]
-      x
-    } else {
-      do.call(
-        abind::abind, 
-        c(x, list(along = 3, new.names = dimnames(p[[metric]])))
+convertVCVscale <- function(p) {
+  # Run QGmvparams across iterations
+  vcv <- parallel::mclapply(
+    X = seq_len(dim(p$VA)[3]),
+    FUN = function(i) {
+      QGglmm::QGmvparams(
+        vcv.G   = p$VA[, , i],
+        vcv.P   = p$VP[, , i],
+        predict = p$overall.block.mean[, , i],
+        models  = c("Gaussian", "Gaussian", "binom1.logit"),
+        verbose = FALSE
       )
+    },
+    mc.cores = 10
+  ) |> purrr::list_transpose()
+  
+  # Collapse results into matrices or arrays
+  lapply(vcv, function(x) {
+    if (is.null(dim(x[[1]]))) {
+      out <- do.call(rbind, x)
+      dimnames(out) <- list(
+        iter  = dimnames(p$VA)[[3]],
+        trait = dimnames(p$VA)[[1]]
+      )
+    } else {
+      out <- abind::abind(x, along = 3)
+      dimnames(out)[[3]] <- dimnames(p$VA)[[3]]
     }
+    out
   })
 }
-vcv.obs <- sapply(c('VA', 'VM', 'VD'), convertVCVscale, p = p, simplify = FALSE)
 
+vcv.obs <- convertVCVscale(p)
 
-# Compute evolvability 
-e.params_BetaMCMC <- evolvability::evolvabilityBetaMCMC(
-  G_mcmc = evolvability::meanStdGMCMC(
-    t(apply(vcv.obs$VA$vcv.G.obs, 3, as.vector)),
-    t(p$pr.overall)
-  ),
-  Beta = evolvability::randomBeta(1000, 2),
-  post.dist = TRUE
-)
+beta <- sapply(1:dim(p$p.settle.sire)[2], function(i) {
+  beta <- c(
+    cov.trunk.settle = cov(p$sire.eff[, 'Trunk', i], p$p.settle.sire[, i]),
+    cov.tail.settle = cov(p$sire.eff[, 'Tail', i], p$p.settle.sire[, i])
+  ) %*% p$sire.vcov[c('Trunk', 'Tail'), c('Trunk', 'Tail'), i]
+  beta[1, ]
+}) |>
+  t()
 
 
 # CODA summary ------------------------------------------------------------
@@ -208,8 +309,7 @@ e.params_BetaMCMC <- evolvability::evolvabilityBetaMCMC(
 post.smry <- summary(
   post,
   vars = c(
-    'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov',
-    'pr.overall', 'pr.block'
+    'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 'resid.vcov'
   ) 
 ) |>  
   as.data.frame() |> 
@@ -229,21 +329,55 @@ diag.smry <- post.smry |>
 
 # Posterior Predictive Check ----------------------------------------------
 
-ppc <- data.frame(id = 1:nrow(df))
+length.obs <- cbind(Trunk = trunk_tail.df$trunk, Tail = trunk_tail.df$tail)
+
+ppc <- expand_grid(
+  metric = colnames(length.obs),
+  id = 1:nrow(length.obs)
+) |> 
+  mutate(metric = factor(metric, colnames(length.obs))) |> 
+  bind_rows(
+    data.frame(metric = 'Settling', id = 1:nrow(settle.df))
+  )
 
 ppc$pct.gte.obs <- sapply(1:nrow(ppc), function(i) {
-  obs <- df$outcome[i]
-  ppd <- p$outcome.ppd[i, ]
+  id <- ppc$id[i]
+  
+  obs <- if(ppc$metric[i] == 'Settling') {
+    settle.df$outcome[id]
+  } else {
+    length.obs[id, ppc$metric[id]]
+  }
+
+  ppd <- if(ppc$metric[i] == 'Settling') {
+    p$settle.ppd[id, ]
+  } else {
+    p$length.ppd[id, ppc$metric[id], ]
+  }
+  
   mean(obs >= ppd)
 })
 
 ppc$mean.diff <- sapply(1:nrow(ppc), function(i) {
-  obs <- df$outcome[i]
-  ppd <- p$outcome.ppd[i, ]
+  id <- ppc$id[i]
+  
+  obs <- if(ppc$metric[i] == 'Settling') {
+    settle.df$outcome[id]
+  } else {
+    length.obs[id, ppc$metric[id]]
+  }
+  
+  ppd <- if(ppc$metric[i] == 'Settling') {
+    p$settle.ppd[id, ]
+  } else {
+    p$length.ppd[id, ppc$metric[id], ]
+  }
+  
   mean(obs - ppd)
 })
 
 ppc.smry <- ppc |> 
+  group_by(metric) |> 
   summarize(
     median.pct = median(pct.gte.obs),
     lower.pct = unname(quantile(pct.gte.obs, 0.025)),
@@ -255,16 +389,16 @@ ppc.smry <- ppc |>
   )
 
 
+
 # Save all objects
 save.image(format(end, 'Model_outputs/Model_III_posterior_%Y%m%d_%H%M.rdata'))
 
 
 # Plot posterior distributions
 plot(
-  post, 
+  post,
   vars = c(
-    'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov',
-    'pr.overall', 'pr.block'
+    'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 'resid.vcov'
   ),
   file = format(end, 'Model_outputs/Model_III_plots_%Y%m%d_%H%M.pdf')
 )
@@ -282,6 +416,7 @@ ggplot(ppc) +
   geom_vline(aes(xintercept = median.pct), data = ppc.smry, color = 'red') +
   geom_vline(aes(xintercept = lower.pct), data = ppc.smry, linetype = 'dashed', color = 'red') +
   geom_vline(aes(xintercept = upper.pct), data = ppc.smry, linetype = 'dashed', color = 'red') +
+  facet_wrap(~ metric, scales = 'free') +
   labs(x = 'Percent of PPD >= Observed', y = 'Count')
 
 ggplot(ppc) +
@@ -289,7 +424,8 @@ ggplot(ppc) +
   geom_vline(aes(xintercept = median.diff), data = ppc.smry, color = 'red') +
   geom_vline(aes(xintercept = lower.diff), data = ppc.smry, linetype = 'dashed', color = 'red') +
   geom_vline(aes(xintercept = upper.diff), data = ppc.smry, linetype = 'dashed', color = 'red') +
-  labs(x = 'Pr(Settling) Difference (Observed - PPD)', y = 'Count')
+  facet_wrap(~ metric, scales = 'free') +
+  labs(x = 'Metric Difference (Observed - PPD)', y = 'Count')
 
 dev.off()
 

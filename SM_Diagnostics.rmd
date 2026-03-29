@@ -74,49 +74,7 @@ suppressMessages(plot(
 # Model II
 
 ```{r}
-load('Model_outputs/Model_II_posterior_20251001_1520.rdata')
-```
-  
-Number of chains: `r length(post$mcmc)`  
-Burnin: `r post$burnin`  
-Samples per chain: `r post$sample`  
-Total samples: `r post$sample * length(post$mcmc)`  
-  
-### A) Posterior distribution diagnostics
-```{r}
-ggplot(post.smry) +
-  geom_histogram(aes(values), bins = 20) +
-  facet_wrap(~diag, scales = 'free_x') 
-```
-
-### B) Posterior predictive check distribution
-```{r}
-ggplot(ppc) +
-  geom_histogram(aes(mean.diff), bins = 50) +
-  labs(
-    x = 'Log Ratio Difference (Observed - PPD)', 
-    y = 'Count'
-  )
-```
-
-\newpage
-### C) By-parameter posterior summaries
-```{r}
-suppressMessages(plot(
-  post, 
-  vars = c(
-    'deviance', 'sire.var', 'dam.var', 'interaction.var', 'resid.var',
-    'mean.overall', 'mean.log.ratio.block'
-  )
-))
-```
-
-
-\newpage
-# Model III
-
-```{r}
-load('Model_outputs/Model_III_posterior_20250930_1554.rdata')
+load('Model_outputs/Model_II_posterior_20250930_1554.rdata')
 ```
   
 Number of chains: `r length(post$mcmc)`  
@@ -155,10 +113,10 @@ suppressMessages(plot(
 
 
 \newpage
-# Model IV
+# Model III
 
 ```{r}
-load('Model_outputs/Model_IV_posterior_20251001_0640.rdata')
+load('Model_outputs/Model_III_posterior_20251001_0640.rdata')
 ```
   
 Number of chains: `r length(post$mcmc)`  

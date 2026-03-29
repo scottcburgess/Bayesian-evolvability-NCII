@@ -5,7 +5,7 @@ source('0_misc_funcs.R')
 
 
 # load and prepare ----
-load("Model_outputs/Model_IV_posterior_20251001_0640.rdata") 
+load("Model_outputs/Model_III_posterior_20251001_0640.rdata") 
 
 # Trunk selection differential  
 cov_trunk_p <- vcv.obs$vcv.G.obs[1, 3, ]
