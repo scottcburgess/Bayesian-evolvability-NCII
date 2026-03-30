@@ -1,6 +1,7 @@
 rm(list = ls())
 library(tidyverse)
 library(runjags)
+source('util_funcs.R')
 
 # MCMC parameters
 chains <- 50
@@ -139,10 +140,7 @@ dimnames(p$sire.vcov)[1:2] <-
   list(dimnames(p$pr.overall)[[1]], dimnames(p$pr.overall)[[1]])
 
 # Add QG metrics to list
-p$VA <- 4 * p$sire.vcov
-p$VM <- p$dam.vcov - p$sire.vcov
-p$VD <- 4 * p$interaction.vcov
-p$VP <- p$VA + p$VM + p$VD
+p <- addQGmetrics(p)
 
 # Compute heritability and evolvability based on deVillemereuil et al 2016
 qgparams.post <- sapply(dimnames(p$pr.overall)[[1]], function(m) {
@@ -163,33 +161,12 @@ p$H <- t(sapply(qgparams.post, function(x) x$h2.obs))
 p$E <- t(sapply(qgparams.post, function(x) x$E))
 
 
-# Use QGglmm to extract full variance/covariance matrix on observed scale
-convertVCVscale <- function(metric, p) {
-  vcv <- parallel::mclapply(1:dim(p[[metric]])[3], function(i) {
-    QGglmm::QGmvparams(
-      vcv.G = p[[metric]][, , i],
-      vcv.P = p$VP[, , i],
-      predict = qlogis(p$pr.block[, , i]),
-      models = c('binom1.logit', 'binom1.logit'),
-      verbose = FALSE
-    )
-  }, mc.cores = 10) |> 
-    purrr::list_transpose()
-  
-  sapply(vcv, function(x) {
-    if(is.null(dim(x[[1]]))) {
-      x <- do.call(rbind, x)
-      colnames(x) <- dimnames(p[[metric]])[[1]]
-      x
-    } else {
-      do.call(
-        abind::abind, 
-        c(x, list(along = 3, new.names = dimnames(p[[metric]])))
-      )
-    }
-  })
-}
-vcv.obs <- sapply(c('VA', 'VM', 'VD'), convertVCVscale, p = p, simplify = FALSE)
+vcv.obs <- sapply(
+  c('VA', 'VM', 'VD'), 
+  convertVCVscale.II, 
+  p = p, 
+  simplify = FALSE
+)
 
 
 # Compute evolvability 
@@ -205,26 +182,10 @@ e.params_BetaMCMC <- evolvability::evolvabilityBetaMCMC(
 
 # CODA summary ------------------------------------------------------------
 
-post.smry <- summary(
-  post,
-  vars = c(
-    'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov',
-    'pr.overall', 'pr.block'
-  ) 
-) |>  
-  as.data.frame() |> 
-  rownames_to_column('metric') |>
-  select(metric, SSeff:psrf) |> 
-  pivot_longer(-metric, names_to = 'diag', values_to = 'values') 
-
-diag.smry <- post.smry |> 
-  group_by(diag) |> 
-  summarize(
-    median = median(values),
-    lower = unname(quantile(values, 0.025)),
-    upper = unname(quantile(values, 0.975)),
-    .groups = 'drop'
-  )
+post.smry <- smrzPost(post, c(
+  'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov',
+  'pr.overall', 'pr.block'
+))
 
 
 # Posterior Predictive Check ----------------------------------------------
@@ -243,16 +204,7 @@ ppc$mean.diff <- sapply(1:nrow(ppc), function(i) {
   mean(obs - ppd)
 })
 
-ppc.smry <- ppc |> 
-  summarize(
-    median.pct = median(pct.gte.obs),
-    lower.pct = unname(quantile(pct.gte.obs, 0.025)),
-    upper.pct = unname(quantile(pct.gte.obs, 0.975)),   
-    median.diff = median(mean.diff),
-    lower.diff = unname(quantile(mean.diff, 0.025)),
-    upper.diff = unname(quantile(mean.diff, 0.975)),
-    .groups = 'drop'
-  )
+ppc.smry <- smrzPPC(ppc)
 
 
 # Save all objects

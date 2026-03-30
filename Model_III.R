@@ -1,6 +1,7 @@
 rm(list = ls())
 library(tidyverse)
 library(runjags)
+source('util_funcs.R')
 
 # MCMC parameters
 chains <- 6 #50
@@ -250,49 +251,10 @@ dimnames(p$sire.vcov)[1:2] <-
 p$resid.vcov['Settling', , ] <- p$resid.vcov[, 'Settling', ] <- 0
 p$resid.vcov['Settling', 'Settling', ] <- 1
 
-
 # Add QG metrics to list
-p$VA <- 4 * p$sire.vcov
-p$VM <- p$dam.vcov - p$sire.vcov
-p$VD <- 4 * p$interaction.vcov
-p$VP <- p$VA + p$VM + p$VD + p$resid.vcov
-p$H <- p$VA / p$VP
+p <- addQGmetrics(p)
 
-
-# Use QGglmm to extract full variance/covariance matrix on observed scale
-convertVCVscale <- function(p) {
-  # Run QGmvparams across iterations
-  vcv <- parallel::mclapply(
-    X = seq_len(dim(p$VA)[3]),
-    FUN = function(i) {
-      QGglmm::QGmvparams(
-        vcv.G   = p$VA[, , i],
-        vcv.P   = p$VP[, , i],
-        predict = p$overall.block.mean[, , i],
-        models  = c("Gaussian", "Gaussian", "binom1.logit"),
-        verbose = FALSE
-      )
-    },
-    mc.cores = 10
-  ) |> purrr::list_transpose()
-  
-  # Collapse results into matrices or arrays
-  lapply(vcv, function(x) {
-    if (is.null(dim(x[[1]]))) {
-      out <- do.call(rbind, x)
-      dimnames(out) <- list(
-        iter  = dimnames(p$VA)[[3]],
-        trait = dimnames(p$VA)[[1]]
-      )
-    } else {
-      out <- abind::abind(x, along = 3)
-      dimnames(out)[[3]] <- dimnames(p$VA)[[3]]
-    }
-    out
-  })
-}
-
-vcv.obs <- convertVCVscale(p)
+vcv.obs <- convertVCVscale.III(p)
 
 beta <- sapply(1:dim(p$p.settle.sire)[2], function(i) {
   beta <- c(
@@ -306,25 +268,9 @@ beta <- sapply(1:dim(p$p.settle.sire)[2], function(i) {
 
 # CODA summary ------------------------------------------------------------
 
-post.smry <- summary(
-  post,
-  vars = c(
-    'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 'resid.vcov'
-  ) 
-) |>  
-  as.data.frame() |> 
-  rownames_to_column('metric') |>
-  select(metric, SSeff:psrf) |> 
-  pivot_longer(-metric, names_to = 'diag', values_to = 'values') 
-
-diag.smry <- post.smry |> 
-  group_by(diag) |> 
-  summarize(
-    median = median(values),
-    lower = unname(quantile(values, 0.025)),
-    upper = unname(quantile(values, 0.975)),
-    .groups = 'drop'
-  )
+post.smry <- smrzPost(post, c(
+  'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 'resid.vcov'
+))
 
 
 # Posterior Predictive Check ----------------------------------------------
@@ -348,7 +294,7 @@ ppc$pct.gte.obs <- sapply(1:nrow(ppc), function(i) {
   } else {
     length.obs[id, ppc$metric[id]]
   }
-
+  
   ppd <- if(ppc$metric[i] == 'Settling') {
     p$settle.ppd[id, ]
   } else {
@@ -376,17 +322,7 @@ ppc$mean.diff <- sapply(1:nrow(ppc), function(i) {
   mean(obs - ppd)
 })
 
-ppc.smry <- ppc |> 
-  group_by(metric) |> 
-  summarize(
-    median.pct = median(pct.gte.obs),
-    lower.pct = unname(quantile(pct.gte.obs, 0.025)),
-    upper.pct = unname(quantile(pct.gte.obs, 0.975)),   
-    median.diff = median(mean.diff),
-    lower.diff = unname(quantile(mean.diff, 0.025)),
-    upper.diff = unname(quantile(mean.diff, 0.975)),
-    .groups = 'drop'
-  )
+ppc.smry <- smrzPPC(ppc)
 
 
 

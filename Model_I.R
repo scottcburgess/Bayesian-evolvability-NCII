@@ -1,6 +1,7 @@
 rm(list = ls())
 library(tidyverse)
 library(runjags)
+source('util_funcs.R')
 
 # MCMC parameters
 chains <- 50
@@ -139,12 +140,7 @@ dimnames(p$sire.vcov)[1:2] <-
   list(rownames(p$mean.overall), rownames(p$mean.overall))
 
 # Add QG metrics to list
-p$VA <- 4 * p$sire.vcov
-p$VM <- p$dam.vcov - p$sire.vcov
-p$VD <- 4 * p$interaction.vcov
-p$VR <- p$resid.vcov
-p$VP <- p$VA + p$VM + p$VD + p$VR
-p$H <- p$VA / p$VP
+p <- addQGmetrics(p)
 p$E <- rbind(
   trunk = p$VA[1, 1, ] / (p$mean.overall[1, ] ^ 2),
   tail = p$VA[2, 2, ] / (p$mean.overall[2, ] ^ 2)
@@ -213,23 +209,9 @@ rownames(e.params_beta) <- NULL
 
 # CODA summary ------------------------------------------------------------
 
-post.smry <- summary(
-  post,
-  vars = c('deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 'resid.vcov') 
-) |>  
-  as.data.frame() |> 
-  rownames_to_column('metric') |>
-  select(metric, SSeff:psrf) |> 
-  pivot_longer(-metric, names_to = 'diag', values_to = 'values') 
-
-diag.smry <- post.smry |> 
-  group_by(diag) |> 
-  summarize(
-    median = median(values),
-    lower = unname(quantile(values, 0.025)),
-    upper = unname(quantile(values, 0.975)),
-    .groups = 'drop'
-  )
+post.smry <- smrzPost(post, c(
+  'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 'resid.vcov'
+))
 
 
 # Posterior Predictive Check ----------------------------------------------
@@ -254,17 +236,7 @@ ppc$mean.diff <- sapply(1:nrow(ppc), function(i) {
   mean(obs - ppd)
 })
 
-ppc.smry <- ppc |> 
-  group_by(metric) |> 
-  summarize(
-    median.pct = median(pct.gte.obs),
-    lower.pct = unname(quantile(pct.gte.obs, 0.025)),
-    upper.pct = unname(quantile(pct.gte.obs, 0.975)),   
-    median.diff = median(mean.diff),
-    lower.diff = unname(quantile(mean.diff, 0.025)),
-    upper.diff = unname(quantile(mean.diff, 0.975)),
-    .groups = 'drop'
-  )
+ppc.smry <- smrzPPC(ppc)
 
 
 # Save all objects
