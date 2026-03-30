@@ -1,7 +1,7 @@
 rm(list = ls())
 library(tidyverse)
 library(runjags)
-source('util_funcs.R')
+source('0_misc_funcs.R')
 
 # MCMC parameters
 chains <- 50
