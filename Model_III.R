@@ -257,12 +257,14 @@ p <- addQGmetrics(p)
 vcv.obs <- convertVCVscale.III(p)
 
 beta <- sapply(1:dim(p$p.settle.sire)[2], function(i) {
-  beta <- c(
+  cov.i <- c(
     cov.trunk.settle = cov(p$sire.eff[, 'Trunk', i], p$p.settle.sire[, i]),
     cov.tail.settle = cov(p$sire.eff[, 'Tail', i], p$p.settle.sire[, i])
-  ) %*% p$sire.vcov[c('Trunk', 'Tail'), c('Trunk', 'Tail'), i]
-  beta[1, ]
-}) |>
+  )
+  inv.vcov <- solve(p$sire.vcov[c('Trunk', 'Tail'), c('Trunk', 'Tail'), i])
+  beta <- cov.i %*% inv.vcov
+  c(cov.i, beta = beta[1, ])
+}) |> 
   t()
 
 
