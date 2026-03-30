@@ -3,11 +3,11 @@ addQGmetrics <- function(p) {
   p$VM <- p$dam.vcov - p$sire.vcov
   p$VD <- 4 * p$interaction.vcov
   p$VP <- p$VA + p$VM + p$VD
-  p$H <- p$VA / p$VP
   if(!is.null(p$resid.vcov)) {
     p$VP <- p$VP + p$resid.vcov
     p$VR <- p$resid.vcov
   }
+  p$H <- p$VA / p$VP
   p
 }
 
@@ -38,6 +38,7 @@ convertVCVscale.II <- function(metric, p) {
     }
   })
 }
+
 
 # Use QGglmm to extract full variance/covariance matrix on observed scale
 convertVCVscale.III <- function(p) {
@@ -72,6 +73,7 @@ convertVCVscale.III <- function(p) {
   })
 }
 
+# summarize posterior sample and create diagnostics summary
 smrzPost <- function(post, v) {
   post.smry <- summary(
     post,
@@ -97,6 +99,7 @@ smrzPost <- function(post, v) {
   list(post = post.smry, diag = diag.smry)
 }
 
+# summarize posterior predictive checks
 smrzPPC <- function(ppc) {
   ppc |> 
     group_by(metric) |> 
