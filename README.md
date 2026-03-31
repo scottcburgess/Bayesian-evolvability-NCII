@@ -17,7 +17,7 @@ Powell JA, Archer FI, Burgess SC. In Prep. Evolvability of marine dispersal trai
 `0_misc_funcs.R` miscellaneous functions used in summary and figure making files.  <br />
 `1_load_and_format.R` load raw data and create formatted RDS files for use in models.  <br />
 
-`Model_##.R` scripts for running Models I - IV.  <br />
+`Model_##.R` scripts for running Models I - III.  <br />
 
 `Figure_#.R` scripts for making figures in manuscript. <br />
 `Table_1.rmd` Rmarkdown for making Table 1 in the manuscript.  <br />
