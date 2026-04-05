@@ -147,7 +147,7 @@ post <- run.jags(
     # ---- prior for additive sire effect (for each sire) ----
     for(s in 1:n.sires) {
       sire.eff[s, 1:3] ~ dmnorm.vcov(sire.mean, sire.vcov)
-      sire.eff.hatch[s] ~ dnorm(0, 1000)
+      sire.eff.hatch[s] ~ dnorm(0, 1e-5)
       
       # effect on probability of settling for each sire
       logit(p.settle.sire[s]) <- sire.eff.hatch[s] + sire.eff[s, 3] 
@@ -186,7 +186,7 @@ post <- run.jags(
     # ---- likelihood of hatching ----
     for(h in 1:n.hatch) {    
       # prior on non-sire effects 
-      non.sire.eff.hatch[h] ~ dnorm(0, 10000)
+      non.sire.eff.hatch[h] ~ dnorm(0, 1e-5)
       
       # linear model to compute probability of hatching 
       logit(pr.hatch[h]) <- non.sire.eff.hatch[h] +
