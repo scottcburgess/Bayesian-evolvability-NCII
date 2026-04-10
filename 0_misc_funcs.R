@@ -212,13 +212,7 @@ convertVCVscale.III <- function(p) {
 
 # summarize posterior sample and create diagnostics summary
 smrzPost <- function(post, v) {
-  post.smry <- summary(
-    post,
-    vars = c(
-      'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov',
-      'pr.overall', 'pr.block'
-    ) 
-  ) |>  
+  post.smry <- summary(post, vars = v) |>  
     as.data.frame() |> 
     rownames_to_column('metric') |>
     select(metric, SSeff:psrf) |> 
