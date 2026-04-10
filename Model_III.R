@@ -271,7 +271,8 @@ beta <- sapply(1:dim(p$p.settle.sire)[2], function(i) {
 # CODA summary ------------------------------------------------------------
 
 post.smry <- smrzPost(post, c(
-  'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 'resid.vcov'
+  'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 'resid.vcov',
+  'sire.eff', 'p.settle.sire'
 ))
 
 
