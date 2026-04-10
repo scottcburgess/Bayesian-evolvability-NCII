@@ -144,6 +144,9 @@ post <- run.jags(
       resid.vcov[j[k], i[k]] <- resid.vcov[i[k], j[k]]
     }
     
+    # prior on mean of non-sire effects of hatching
+    mean.non.sire.eff.hatch ~ dnorm(0, 1e-5)
+    
     # ---- prior for additive sire effect (for each sire) ----
     for(s in 1:n.sires) {
       sire.eff[s, 1:3] ~ dmnorm.vcov(sire.mean, sire.vcov)
@@ -151,6 +154,9 @@ post <- run.jags(
       
       # effect on probability of settling for each sire
       logit(p.settle.sire[s]) <- sire.eff.hatch[s] + sire.eff[s, 3] 
+      
+      # probability of hatching for sire s
+      logit(p.hatch.sire[s]) <- mean.non.sire.eff.hatch + sire.eff.hatch[s] 
     }
     
     # ---- prior for maternal effect (for each dam) ----
@@ -185,14 +191,7 @@ post <- run.jags(
     
     # ---- likelihood of hatching ----
     for(h in 1:n.hatch) {    
-      # prior on non-sire effects 
-      non.sire.eff.hatch[h] ~ dnorm(0, 1e-5)
-      
-      # linear model to compute probability of hatching 
-      logit(pr.hatch[h]) <- non.sire.eff.hatch[h] +
-        sire.eff.hatch[hatch.sire[h]] 
-        
-      hatch[h] ~ dbern(pr.hatch[h])
+      hatch[h] ~ dbern(p.hatch.sire[hatch.sire[h]])
     }
     
     # ---- likelihood of settling given hatching ----
@@ -217,7 +216,8 @@ post <- run.jags(
   monitor = c(
     'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 
     'resid.vcov', 'overall.block.mean', 'mean.overall', 
-    'length.ppd', 'settle.ppd', 'sire.eff', 'p.settle.sire'
+    'length.ppd', 'settle.ppd', 'sire.eff', 'p.settle.sire', 
+    'mean.non.sire.eff.hatch', 'p.hatch.sire'
   ), 
   inits = function() list(
     .RNG.name = 'lecuyer::RngStream',
@@ -272,7 +272,7 @@ beta <- sapply(1:dim(p$p.settle.sire)[2], function(i) {
 
 post.smry <- smrzPost(post, c(
   'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 'resid.vcov',
-  'sire.eff', 'p.settle.sire'
+  'sire.eff', 'p.settle.sire', 'mean.non.sire.eff.hatch', 'p.hatch.sire'
 ))
 
 
@@ -337,7 +337,8 @@ save.image(format(end, 'Model_outputs/Model_III_posterior_%Y%m%d_%H%M.rdata'))
 plot(
   post,
   vars = c(
-    'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 'resid.vcov'
+    'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 'resid.vcov', 
+    'sire.eff', 'p.settle.sire', 'mean.non.sire.eff.hatch', 'p.hatch.sire'
   ),
   file = format(end, 'Model_outputs/Model_III_plots_%Y%m%d_%H%M.pdf')
 )
@@ -346,7 +347,7 @@ plot(
 # Plot diagnostics
 pdf(format(end, "Model_outputs/Model_III_diagnostics_%Y%m%d_%H%M.pdf"))
 
-ggplot(post.smry) +
+ggplot(post.smry$post) +
   geom_histogram(aes(values), bins = 20) +
   facet_wrap(~diag, scales = 'free_x')
 

@@ -221,9 +221,9 @@ smrzPost <- function(post, v) {
   diag.smry <- post.smry |> 
     group_by(diag) |> 
     summarize(
-      median = median(values),
-      lower = unname(quantile(values, 0.025)),
-      upper = unname(quantile(values, 0.975)),
+      median = median(values, na.rm = TRUE),
+      lower = unname(quantile(values, 0.025, na.rm = TRUE)),
+      upper = unname(quantile(values, 0.975, na.rm = TRUE)),
       .groups = 'drop'
     )
   
