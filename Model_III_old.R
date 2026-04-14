@@ -14,7 +14,7 @@ thin <- 1 #5000
 trunk_tail.df <- readRDS('Data/trunk_tail_data.rds') 
 hatch_settle.df <- readRDS('Data/hatch_settle_data.rds') 
 
-# Select blocks and interactions to shared between trunk/tail and hatching/settling data
+
 blocks <- hatch_settle.df |> 
   group_by(block) |> 
   summarize(
@@ -29,8 +29,17 @@ blocks <- hatch_settle.df |>
 interactions <- intersect(trunk_tail.df$interaction, hatch_settle.df$interaction)
 
 trunk_tail.df <- trunk_tail.df |> 
-  # filter trunk/tail data for blocks and interactions to use
   filter(interaction %in% interactions & block %in% blocks) |> 
+  mutate(
+    block = as.numeric(factor(block)),
+    sire = as.numeric(factor(sire)),
+    dam = as.numeric(factor(dam)),
+    interaction = as.numeric(factor(interaction))
+  )
+hatch_settle.df <- hatch_settle.df |> 
+  filter(interaction %in% interactions & block %in% blocks)
+
+hs.df <- hatch_settle.df |> 
   mutate(
     block = as.numeric(factor(block)),
     sire = as.numeric(factor(sire)),
@@ -39,28 +48,46 @@ trunk_tail.df <- trunk_tail.df |>
   )
 
 
-hatch_settle.df <- hatch_settle.df |> 
-  # filter hatching/settling data for blocks and interactions to use 
-  filter(interaction %in% interactions & block %in% blocks) |> 
-  mutate(
-    block = as.numeric(factor(block)),
-    sire = as.numeric(factor(sire)),
-    dam = as.numeric(factor(dam)),
-    interaction = as.numeric(factor(interaction))
-  ) |> 
-  # compress to number of successes and trials for hatching and settling by interaction
+settle.df <- hs.df |> 
+  filter(metric == 'settling') |> 
   group_by(block, sire, dam, interaction) |> 
   summarize(
-    n.hatched.trial = sum(metric == 'hatching'),
-    n.hatched = sum(metric == 'hatching' & outcome == 1),
-    pct.hatched = n.hatched / n.hatched.trial,
-    n.hatched.settled.trial = sum(metric == 'settling'),
-    n.hatched.settled = sum(metric == 'settling' & outcome == 1),
-    pct.hatched.settled = n.hatched.settled / n.hatched.settled.trial,
-    pr.settle = pct.hatched * pct.hatched.settled,
+    n = n(),
+    settled = sum(outcome),
+    .groups = 'drop'
+  )
+
+hatch.df <- hs.df |> 
+  filter(metric == 'hatching') |> 
+  group_by(block, sire, dam, interaction) |> 
+  summarize(
+    n = n(),
+    hatched = sum(outcome),
+    .groups = 'drop'
+  )
+
+# Summarize hatching and settling rate across blocks
+hatch_settle.df |> 
+  group_by(interaction, metric) |> 
+  summarize(pct = mean(outcome, na.rm = TRUE), .groups = 'drop') |> 
+  pivot_wider(names_from = 'metric', values_from = 'pct') |> 
+  as.data.frame()
+
+hatch_settle.df |> 
+  group_by(block, metric) |> 
+  summarize(
+    n = n(),
+    n.settle = sum(outcome), 
+    pr.settle = n.settle / n,
     .groups = 'drop'
   ) |> 
-  arrange(interaction)
+  mutate(
+    a = n.settle + 1,
+    b = n - n.settle + 1,
+    lower = qbeta(0.0001, a, b),
+    upper = qbeta(0.9999, a, b)
+  ) |> 
+  as.data.frame()
 
 
 # Run model
@@ -71,10 +98,10 @@ post <- run.jags(
     n.dams = n_distinct(trunk_tail.df$dam),
     n.interactions = n_distinct(trunk_tail.df$interaction),
     n.larvae = nrow(trunk_tail.df),
-    tt.block = trunk_tail.df$block,
-    tt.sire = trunk_tail.df$sire,
-    tt.dam = trunk_tail.df$dam,
-    tt.interaction = trunk_tail.df$interaction,
+    block = trunk_tail.df$block,
+    sire = trunk_tail.df$sire,
+    dam = trunk_tail.df$dam,
+    interaction = trunk_tail.df$interaction,
     block.mean.range = cbind(
       round(range(trunk_tail.df$trunk)), 
       round(range(trunk_tail.df$tail)),
@@ -83,16 +110,22 @@ post <- run.jags(
     length1 = cbind(trunk_tail.df$trunk, trunk_tail.df$tail),
     length2 = cbind(trunk_tail.df$trunk, trunk_tail.df$tail),
     length3 = cbind(trunk_tail.df$trunk, trunk_tail.df$tail),
-    hs.block = hatch_settle.df$block,
-    hs.sire = hatch_settle.df$sire,
-    hs.dam = hatch_settle.df$dam,
-    hs.interaction = hatch_settle.df$interaction,
-    k.hatch = hatch_settle.df$n.hatched.trial,
-    n.hatch = hatch_settle.df$n.hatched,
-    k.settle.hatch = hatch_settle.df$n.hatched.settled.trial,
-    n.settle.hatch.1 = hatch_settle.df$n.hatched.settled,
-    n.settle.hatch.2 = hatch_settle.df$n.hatched.settled,
-    n.settle.hatch.3 = hatch_settle.df$n.hatched.settled,
+    n.hatch.trial = nrow(hatch.df),
+    hatch.block = hatch.df$block,
+    hatch.sire = hatch.df$sire,
+    hatch.dam = hatch.df$dam,
+    hatch.interaction = hatch.df$interaction,
+    hatch.n = hatch.df$n,
+    n.hatched = hatch.df$hatched,
+    n.settle.trial = nrow(settle.df),
+    settle.block = settle.df$block,
+    settle.sire = settle.df$sire,
+    settle.dam = settle.df$dam,
+    settle.interaction = settle.df$interaction,
+    settle.n = settle.df$n,
+    n.settled.1 = settle.df$settled,
+    n.settled.2 = settle.df$settled,    
+    n.settled.3 = settle.df$settled, 
     i = c(1, 1, 2),
     j = c(2, 3, 3)
   ),
@@ -147,6 +180,9 @@ post <- run.jags(
     for(s in 1:n.sires) {
       hatch.sire.eff[s] ~ dnorm(0, 1e-3)
       sire.eff[s, 1:3] ~ dmnorm.vcov(sire.mean, sire.vcov)
+      
+      # effect on probability of settling for each sire
+      pr.settle.sire[s] <- ilogit(hatch.sire.eff[s] + sire.eff[s, 3])
     }
     
     # ---- prior for maternal effect (for each dam) ----
@@ -155,67 +191,24 @@ post <- run.jags(
       dam.eff[d, 1:3] ~ dmnorm.vcov(dam.mean, dam.vcov)
     }
     
-    
+    # ---- prior for interaction effect (for each sire x dam interaction) ----
     for(int in 1:n.interactions) {
-      # ---- prior for interaction effect (for each sire x dam interaction) ----
       hatch.interaction.eff[int] ~ dnorm(0, 1e-3)
       interaction.eff[int, 1:3] ~ dmnorm.vcov(interaction.mean, interaction.vcov)
-      
-      # ---- likelihood of hatching ----
-      pr.hatch[int] <- ilogit(
-        hatch.block.mean[hs.block[int]] +
-        hatch.sire.eff[hs.sire[int]] +
-        hatch.dam.eff[hs.dam[int]] +
-        hatch.interaction.eff[hs.interaction[int]]
-      )
-      n.hatch[int] ~ dbinom(pr.hatch[int], k.hatch[int])
-    
-      # ---- likelihood of settling given hatching ----
-      # linear model to compute probability of settling given hatching
-      pr.settle.hatch[int] <- ilogit(
-        block.mean[hs.block[int], 3] +
-        sire.eff[hs.sire[int], 3] +
-        dam.eff[hs.dam[int], 3] +
-        interaction.eff[hs.interaction[int], 3]
-      )
-      # probability of settling given hatching likelihood
-      n.settle.hatch.1[int] ~ dbinom(pr.settle.hatch[int], k.settle.hatch[int])
-      
-      # settling block mean is on logit scale, so must take inverse-logit for binomial likelihood
-      n.settle.hatch.2[int] ~ dbinom(ilogit(mean.overall[3]), k.settle.hatch[int])
-      n.settle.hatch.3[int] ~ dbinom(ilogit(overall.block.mean[hs.block[int], 3]), k.settle.hatch[int])
-      
-      # draw for posterior predictive check
-      settle.hatch.ppd[int] ~ dbinom(pr.settle.hatch[int], k.settle.hatch[int])
-      
-      # ---- compute effect of sires on overall probability of settling ----
-      pr.settle[int] <- pr.hatch[int] * pr.settle.hatch[int]
-      pr.hatch.wo.sire[int] <- ilogit(
-        hatch.block.mean[hs.block[int]] +
-        hatch.dam.eff[hs.dam[int]] +
-        hatch.interaction.eff[hs.interaction[int]]
-      )
-      pr.settle.hatch.wo.sire[int] <- ilogit(
-        block.mean[hs.block[int], 3] +
-        dam.eff[hs.dam[int], 3] +
-        interaction.eff[hs.interaction[int], 3]
-      )
-      pr.settle.sire.eff[int] <- pr.settle[int] -  (pr.hatch.wo.sire[int] * pr.settle.hatch.wo.sire[int])
     }
-    
     
     # ---- trunk/tail likelihood ----
     for(l in 1:n.larvae) {
       for(t in 1:2) {        
         # likelihood of overall mean for computing evolvability
         length1[l, t] ~ dnorm(mean.overall[t], 1 / var.overall[t])
-        length2[l, t] ~ dnorm(overall.block.mean[tt.block[l], t], 1 / overall.block.var[tt.block[l], t])
+        length2[l, t] ~ dnorm(overall.block.mean[block[l], t], 1 / overall.block.var[block[l], t])
         
         # expected mean for the l-th larvae and t-th trait
-        length.mu[l, t] <- block.mean[tt.block[l], t] + 
-          sire.eff[tt.sire[l], t] + 
-          dam.eff[tt.dam[l], t] +
-          interaction.eff[tt.interaction[l], t]
+        length.mu[l, t] <- block.mean[block[l], t] + 
+          sire.eff[sire[l], t] + 
+          dam.eff[dam[l], t] +
+          interaction.eff[interaction[l], t]
       }
       # likelihood of l-th larvae for both traits from multivariate normal
       length3[l, ] ~ dmnorm.vcov(length.mu[l, ], resid.vcov[1:2, 1:2])
@@ -223,12 +216,45 @@ post <- run.jags(
       # draw for posterior predictive check
       length.ppd[l, 1:2] ~ dmnorm.vcov(length.mu[l, ], resid.vcov[1:2, 1:2])
     }
+    
+    # ---- likelihood of hatching ----
+    for(h in 1:n.hatch.trial) {    
+     pr.hatch[h] <- ilogit(
+       hatch.block.mean[hatch.block[h]] +
+       hatch.sire.eff[hatch.sire[h]] +
+       hatch.dam.eff[hatch.dam[h]] +
+       hatch.interaction.eff[hatch.interaction[h]]
+     )
+      
+      n.hatched[h] ~ dbinom(pr.hatch[h], hatch.n[h])
+    }
+    
+    # ---- likelihood of settling given hatching ----
+    for(s in 1:n.settle.trial) {
+      # settling block mean is on logit scale, so must take inverse-logit for bernoulli likelihood
+      n.settled.1[s] ~ dbinom(ilogit(mean.overall[3]), settle.n[s])
+      n.settled.2[s] ~ dbinom(ilogit(overall.block.mean[settle.block[s], 3]), settle.n[s])
+      
+      # linear model to compute probability of settling given hatching
+      pr.settle.hatch[s] <- ilogit(
+        block.mean[settle.block[s], 3] +
+        sire.eff[settle.sire[s], 3] +
+        dam.eff[settle.dam[s], 3] +
+        interaction.eff[settle.interaction[s], 3]
+      )
+        
+      # probability of settling given hatching likelihood
+      n.settled.3[s] ~ dbinom(pr.settle.hatch[s], settle.n[s])
+      
+      # draw for posterior predictive check
+      settle.ppd[s] ~ dbinom(pr.settle.hatch[s], settle.n[s])
+    }
   }',
   monitor = c(
     'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 
     'resid.vcov', 'overall.block.mean', 'mean.overall', 
-    'length.ppd', 'settle.hatch.ppd', 'sire.eff',
-    'pr.hatch', 'pr.settle.hatch', 'pr.settle', 'pr.settle.sire.eff'
+    'length.ppd', 'settle.ppd', 'sire.eff', 'hatch.sire.eff', 'pr.settle.sire',
+    'pr.hatch'
   ), 
   inits = function() list(
     .RNG.name = 'lecuyer::RngStream',
@@ -269,8 +295,8 @@ vcv.obs <- convertVCVscale.III(p)
 
 beta <- sapply(1:dim(p$pr.settle.sire)[2], function(i) {
   cov.i <- c(
-    cov.trunk.settle = cov(p$sire.eff[, 'Trunk', i], p$pr.settle.sire.eff[, i]),
-    cov.tail.settle = cov(p$sire.eff[, 'Tail', i], p$pr.settle.sire.eff[, i])
+    cov.trunk.settle = cov(p$sire.eff[, 'Trunk', i], p$pr.settle.sire[, i]),
+    cov.tail.settle = cov(p$sire.eff[, 'Tail', i], p$pr.settle.sire[, i])
   )
   inv.vcov <- solve(p$sire.vcov[c('Trunk', 'Tail'), c('Trunk', 'Tail'), i])
   beta <- cov.i %*% inv.vcov
@@ -283,7 +309,7 @@ beta <- sapply(1:dim(p$pr.settle.sire)[2], function(i) {
 
 post.smry <- smrzPost(post, c(
   'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 'resid.vcov',
-  'pr.hatch', 'pr.settle.hatch', 'pr.settle', 'pr.settle.sire.eff' 
+  'sire.eff', 'hatch.sire.eff', 'pr.settle.sire', 'pr.hatch',
 ))
 
 
@@ -349,7 +375,7 @@ plot(
   post,
   vars = c(
     'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 'resid.vcov', 
-    'pr.hatch', 'pr.settle.hatch', 'pr.settle', 'pr.settle.sire.eff' 
+    'sire.eff', 'hatch.sire.eff', 'pr.settle.sire', 'pr.hatch'
   ),
   file = format(end, 'Model_outputs/Model_III_plots_%Y%m%d_%H%M.pdf')
 )
