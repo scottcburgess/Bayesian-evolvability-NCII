@@ -220,7 +220,6 @@ end <- Sys.time()
 elapsed <- swfscMisc::autoUnits(post$timetaken)
 
 
-
 # Extract posterior to list of arrays - p
 p <- swfscMisc::runjags2list(post)
 dimnames(p$overall.block.mean)[[2]] <- 
@@ -265,29 +264,29 @@ ppc <- expand_grid(
 ) |> 
   mutate(metric = factor(metric, colnames(length.obs))) |> 
   bind_rows(
-    data.frame(metric = 'Settling', id = 1:nrow(hatch_settle.df))
+    data.frame(metric = 'Hatching', id = 1:nrow(hatch_settle.df)),
+    data.frame(metric = 'Settling.Hatching', id = 1:nrow(hatch_settle.df))
   )
 
 ppc <- ppc |> 
   cbind(sapply(1:nrow(ppc), function(i) {
     id <- ppc$id[i]
     
-    obs <- if(ppc$metric[i] == 'Settling') {
-      hatch_settle.df$n.settled.hatched[id]
-    } else {
+    obs <- switch(
+      ppc$metric[id],
+      Hatching = hatch_settle.df$n.hatched[id],
+      Settling.Hatching = hatch_settle.df$n.settled.hatched[id],
       length.obs[id, ppc$metric[id]]
-    }
-    
-    ppd <- if(ppc$metric[i] == 'Settling') {
-      p$settle.hatch.ppd[id, ]
-    } else {
-      p$length.ppd[id, ppc$metric[id], ]
-    }
-    
-    c(
-      pct.gte.obs = mean(obs >= ppd), 
-      mean.diff = mean(obs - ppd)
     )
+    
+    ppd <- switch(
+      ppc$metric[id],
+      Hatching = p$hatch.ppd[id, ],
+      Settling.Hatching = p$settle.hatch.ppd[id, ],
+      p$length.ppd[id, ppc$metric[id], ]
+    )
+    
+    c(pct.gte.obs = mean(obs >= ppd), mean.diff = mean(obs - ppd))
   }) |> 
     t()
   )
