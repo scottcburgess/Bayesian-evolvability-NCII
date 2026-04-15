@@ -80,19 +80,15 @@ post <- run.jags(
     length1 = cbind(trunk_tail.df$trunk, trunk_tail.df$tail),
     length2 = cbind(trunk_tail.df$trunk, trunk_tail.df$tail),
     length3 = cbind(trunk_tail.df$trunk, trunk_tail.df$tail),
-    hs.sire = hatch_settle.df$sire,
+    hs.block = hatch_settle.df$block,
     k.hatch = hatch_settle.df$n.hatched.trial,
     n.hatch = hatch_settle.df$n.hatched,
     k.settle.hatch = hatch_settle.df$n.settled.hatched.trial,
-    n.settle.hatch.1 = hatch_settle.df$n.settled.hatched,
-    n.settle.hatch.2 = hatch_settle.df$n.settled.hatched,
-    # n.settle.hatch.3 = hatch_settle.df$n.settled.hatched,
-    i = c(1, 1, 2),
-    j = c(2, 3, 3)
+    n.settle.hatch = hatch_settle.df$n.settled.hatched
   ),
   model = 'model {
     # for each t-trait...
-    for(t in 1:3) {  
+    for(t in 1:2) {  
       # ---- prior for overall mean and variance ----
       mean.overall[t] ~ dunif(block.mean.range[1, t], block.mean.range[2, t])
       var.overall[t] ~ dunif(0, 1e5)
@@ -121,16 +117,14 @@ post <- run.jags(
     resid.corr ~ dunif(-1, 1)
     
     # ---- construct variance/covariance matrices ----
-    for(k in 1:3) {
-      sire.vcov[i[k], j[k]] <- sire.corr * sqrt(sire.vcov[i[k], i[k]] * sire.vcov[j[k], j[k]])
-      sire.vcov[j[k], i[k]] <- sire.vcov[i[k], j[k]]
-      dam.vcov[i[k], j[k]]  <- dam.corr * sqrt(dam.vcov[i[k], i[k]] * dam.vcov[j[k], j[k]])
-      dam.vcov[j[k], i[k]] <- dam.vcov[i[k], j[k]]
-      interaction.vcov[i[k], j[k]] <- interaction.corr * sqrt(interaction.vcov[i[k], i[k]] * interaction.vcov[j[k], j[k]])
-      interaction.vcov[j[k], i[k]] <- interaction.vcov[i[k], j[k]]
-      resid.vcov[i[k], j[k]] <- resid.corr * sqrt(resid.vcov[i[k], i[k]] * resid.vcov[j[k], j[k]])
-      resid.vcov[j[k], i[k]] <- resid.vcov[i[k], j[k]]
-    }
+    sire.vcov[1, 2] <- sire.corr * sqrt(sire.vcov[1, 1] * sire.vcov[2, 2])
+    sire.vcov[2, 1] <- sire.vcov[1, 2]
+    dam.vcov[1, 2]  <- dam.corr * sqrt(dam.vcov[1, 1] * dam.vcov[2, 2])
+    dam.vcov[2, 1] <- dam.vcov[1, 2]
+    interaction.vcov[1, 2] <- interaction.corr * sqrt(interaction.vcov[1, 1] * interaction.vcov[2, 2])
+    interaction.vcov[2, 1] <- interaction.vcov[1, 2]
+    resid.vcov[1, 2] <- resid.corr * sqrt(resid.vcov[1, 1] * resid.vcov[2, 2])
+    resid.vcov[2, 1] <- resid.vcov[1, 2]
     
     # ---- priors on block mean of hatching and settling given hatching
     for(b in 1:n.blocks) {
@@ -139,21 +133,27 @@ post <- run.jags(
     }
     
     for(s in 1:n.sires) {
-      # ---- prior for additive sire effect (for each sire) ----
+      # ---- prior for additive sire effect for trunk/tail (for each sire) ----
+      sire.eff[s, 1:2] ~ dmnorm.vcov(sire.mean, sire.vcov)
+      
+      # ---- probability of hatching ----
+      # prior on hatching sire effect
       hatch.sire.eff[s] ~ dnorm(0, 1e-3)
-      sire.eff[s, 1:3] ~ dmnorm.vcov(sire.mean, sire.vcov)
       
-      # ---- likelihood of hatching ----
-      pr.hatch[s] <- ilogit(hatch.block.mean[hs.block[s]] + hatch.sire.eff[hs.sire[s]])
+      # likelihood of hatching
+      pr.hatch[s] <- ilogit(hatch.block.mean[hs.block[s]] + hatch.sire.eff[s])
       n.hatch[s] ~ dbinom(pr.hatch[s], k.hatch[s])
-    
-      # ---- likelihood of settling given hatching ----
-      pr.settle.hatch[s] <- ilogit(settle.hatch.block.mean[hs.block[s]] + sire.eff[hs.sire[s], 3])
-      n.settle.hatch.1[s] ~ dbinom(pr.settle.hatch[s], k.settle.hatch[s])
       
-      # settling block mean is on logit scale, so must take inverse-logit for binomial likelihood
-      n.settle.hatch.2[s] ~ dbinom(ilogit(mean.overall[3]), k.settle.hatch[s])
-      # n.settle.hatch.3[s] ~ dbinom(ilogit(overall.block.mean[hs.block[s], 3]), k.settle.hatch[s])
+      # draw for posterior predictive check
+      hatch.ppd[s] ~ dbinom(pr.hatch[s], k.hatch[s])
+    
+      # ---- probability of settling given hatching ----
+      # prior on settling given hatching sire effect
+      settle.hatch.sire.eff[s] ~ dnorm(0, 1e-3)
+      
+      # likelihood of settling given hatching
+      pr.settle.hatch[s] <- ilogit(settle.hatch.block.mean[hs.block[s]] + settle.hatch.sire.eff[s])
+      n.settle.hatch[s] ~ dbinom(pr.settle.hatch[s], k.settle.hatch[s])
       
       # draw for posterior predictive check
       settle.hatch.ppd[s] ~ dbinom(pr.settle.hatch[s], k.settle.hatch[s])
@@ -161,19 +161,19 @@ post <- run.jags(
       # ---- overall probability of settling ----
       pr.settle[s] <- pr.hatch[s] * pr.settle.hatch[s]
       
-      # ---- effect of sires on overall probability of settling ----
+      # ---- effect of sire on overall probability of settling ----
       pr.settle.wo.sire[s] <- ilogit(hatch.block.mean[hs.block[s]]) * ilogit(settle.hatch.block.mean[hs.block[s]])
       pr.settle.sire.eff[s] <- pr.settle[s] - pr.settle.wo.sire[s]
     }
     
     # ---- prior for maternal effect (for each dam) ----
     for(d in 1:n.dams) {
-      dam.eff[d, 1:3] ~ dmnorm.vcov(dam.mean, dam.vcov)
+      dam.eff[d, 1:2] ~ dmnorm.vcov(dam.mean, dam.vcov)
     }
     
     # ---- prior for interaction effect (for each sire x dam interaction) ----
     for(int in 1:n.interactions) {
-      interaction.eff[int, 1:3] ~ dmnorm.vcov(interaction.mean, interaction.vcov)
+      interaction.eff[int, 1:2] ~ dmnorm.vcov(interaction.mean, interaction.vcov)
     }
     
     # ---- trunk/tail likelihood ----
@@ -199,8 +199,9 @@ post <- run.jags(
   monitor = c(
     'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 
     'resid.vcov', 'overall.block.mean', 'mean.overall', 
-    'length.ppd', 'settle.hatch.ppd', 'sire.eff',
-    'pr.hatch', 'pr.settle.hatch', 'pr.settle', 'pr.settle.sire.eff'
+    'length.ppd',  'sire.eff',
+    'pr.hatch', 'pr.settle.hatch', 'pr.settle', 'pr.settle.sire.eff',
+    'hatch.ppd', 'settle.hatch.ppd'
   ), 
   inits = function() list(
     .RNG.name = 'lecuyer::RngStream',
@@ -218,26 +219,21 @@ post <- run.jags(
 end <- Sys.time()
 elapsed <- swfscMisc::autoUnits(post$timetaken)
 
+
+
 # Extract posterior to list of arrays - p
 p <- swfscMisc::runjags2list(post)
 dimnames(p$overall.block.mean)[[2]] <- 
-  dimnames(p$sire.eff)[[2]] <- c('Trunk', 'Tail', 'Settling')
-dimnames(p$length.ppd)[[2]] <- c('Trunk', 'Tail')
+  dimnames(p$sire.eff)[[2]] <-
+  dimnames(p$length.ppd)[[2]] <- c('Trunk', 'Tail')
 dimnames(p$sire.vcov)[1:2] <-
   dimnames(p$dam.vcov)[1:2] <-
   dimnames(p$interaction.vcov)[1:2] <-
   dimnames(p$resid.vcov)[1:2] <- 
   list(dimnames(p$overall.block.mean)[[2]], dimnames(p$overall.block.mean)[[2]])
 
-
-# Hardcode settling resid.vcov off-diag to 0 and diag to 1
-p$resid.vcov['Settling', , ] <- p$resid.vcov[, 'Settling', ] <- 0
-p$resid.vcov['Settling', 'Settling', ] <- 1
-
 # Add QG metrics to list
 p <- addQGmetrics(p)
-
-# vcv.obs <- convertVCVscale.III(p)
 
 beta <- sapply(1:dim(p$pr.settle.sire)[2], function(i) {
   cov.i <- c(
