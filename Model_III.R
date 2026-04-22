@@ -234,12 +234,12 @@ dimnames(p$sire.vcov)[1:2] <-
 # Add QG metrics to list
 p <- addQGmetrics(p)
 
-beta <- sapply(1:dim(p$pr.settle.sire)[2], function(i) {
+beta <- sapply(1:dim(p$pr.settle.sire.eff)[2], function(i) {
   s_g <- 16 * c(
     cov(p$sire.eff[, 'Trunk', i], p$pr.settle.sire.eff[, i]),
     cov(p$sire.eff[, 'Tail', i], p$pr.settle.sire.eff[, i])
   )
-  inv.G <- solve(p$VA[c('Trunk', 'Tail'), c('Trunk', 'Tail'), i])
+  inv.G <- solve(p$VA[, , i])
   beta <- inv.G %*% s_g
   setNames(
     c(s_g, beta[, 1]),
