@@ -138,8 +138,8 @@ plot_func <- function(df, title, bw, breaks, max_x) {
 addQGmetrics <- function(p) {
   p$VA <- 4 * p$sire.vcov
   p$VM <- p$dam.vcov - p$sire.vcov
-  p$VD <- 4 * p$interaction.vcov
-  p$VP <- p$VA + p$VM + p$VD
+  p$VD <- 4 * p$int.vcov
+  p$VP <- p$sire.vcov + p$dam.vcov + p$int.vcov
   if(!is.null(p$resid.vcov)) {
     p$VP <- p$VP + p$resid.vcov
     p$VR <- p$resid.vcov
