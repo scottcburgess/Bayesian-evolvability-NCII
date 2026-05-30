@@ -118,9 +118,7 @@ post <- run.jags(
         block.mean[b, t] ~ dunif(block.mean.range[1, t], block.mean.range[2, t])
       }
       
-      resid.vcov[t, t] ~ dunif(0, 1e3)
     }
-    resid.corr ~ dunif(-1, 1)
     
     # ---- hatch and settle|hatch specific priors ----
     for(t in 3:4) {
@@ -140,6 +138,7 @@ post <- run.jags(
       sire.vcov[t, t] ~ dunif(0, 1e3)
       dam.vcov[t, t] ~ dunif(0, 1e3)
       int.vcov[t, t] ~ dunif(0, 1e3)
+      resid.vcov[t, t] ~ dunif(0, 1e3)
     }
     
     # ---- construct variance/covariance matrices ----
@@ -152,6 +151,8 @@ post <- run.jags(
         dam.corr[t2, t1] <- dam.corr[t1, t2]
         int.corr[t1, t2] ~ dunif(-1, 1)
         int.corr[t2, t1] <- int.corr[t1, t2]
+        resid.corr[t1, t2] ~ dunif(-1, 1)
+        resid.corr[t2, t1] <- resid.corr[t1, t2]
       
         # ---- covariances ----
         sire.vcov[t1, t2] <- sire.corr[t1, t2] * sqrt(sire.vcov[t1, t1] * sire.vcov[t2, t2])
@@ -160,10 +161,10 @@ post <- run.jags(
         dam.vcov[t2, t1] <- dam.vcov[t1, t2]
         int.vcov[t1, t2] <- int.corr[t1, t2] * sqrt(int.vcov[t1, t1] * int.vcov[t2, t2])
         int.vcov[t2, t1] <- int.vcov[t1, t2]
+        resid.vcov[t1, t2] <- resid.corr[t1, t2] * sqrt(resid.vcov[t1, t1] * resid.vcov[t2, t2])
+        resid.vcov[t2, t1] <- resid.vcov[t1, t2]
       }
     }
-    resid.vcov[1, 2] <- resid.corr * sqrt(resid.vcov[1, 1] * resid.vcov[2, 2])
-    resid.vcov[2, 1] <- resid.vcov[1, 2]
     
     # ---- prior for additive sire effect (for each sire) ----
     for(s in 1:n.sires) {
