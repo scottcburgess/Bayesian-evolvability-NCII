@@ -129,7 +129,7 @@ post <- run.jags(
     
     # ---- priors for effects ----
     for(t in 1:4) {
-      # ---- effect magnitudes ----
+      # ---- effect means ----
       sire.mean[t] ~ dnorm(0, 1e-5)
       dam.mean[t] ~ dnorm(0, 1e-5)
       int.mean[t] ~ dnorm(0, 1e-5)
@@ -166,17 +166,17 @@ post <- run.jags(
       }
     }
     
-    # ---- prior for additive sire effect (for each sire) ----
+    # ---- draw additive sire effect ----
     for(s in 1:n.sires) {
       sire.eff[s, 1:4] ~ dmnorm.vcov(sire.mean, sire.vcov)
     }
     
-    # ---- prior for maternal effect (for each dam) ----
+    # ---- draw maternal effect (for each dam) ----
     for(d in 1:n.dams) {
       dam.eff[d, 1:4] ~ dmnorm.vcov(dam.mean, dam.vcov)
     }
     
-    # ---- prior for interaction effect (for each sire x dam interaction) ----
+    # ---- draw interaction effect (for each sire x dam interaction) ----
     for(int in 1:n.int) {
       int.eff[int, 1:4] ~ dmnorm.vcov(int.mean, int.vcov)
     }
