@@ -243,10 +243,10 @@ elapsed <- swfscMisc::autoUnits(post$timetaken)
 p <- swfscMisc::runjags2list(post)
 dimnames(p$overall.block.mean)[[2]] <- 
   dimnames(p$mean.overall)[[1]] <- c('Trunk', 'Tail')
-dimnames(p$resid.vcov)[1:2] <- list(c('Trunk', 'Tail'), c('Trunk', 'Tail'))
 dimnames(p$sire.vcov) <-
   dimnames(p$dam.vcov) <-
-  dimnames(p$int.vcov) <- list(
+  dimnames(p$int.vcov) <- 
+  dimnames(p$resid.vcov) <- list(
     c('Trunk', 'Tail', 'Hatch', 'Settle|Hatch'), 
     c('Trunk', 'Tail', 'Hatch', 'Settle|Hatch')
   )
@@ -346,7 +346,7 @@ post.smry <- smrzPost(
 plot(
   post,
   vars = c('deviance', 'sire.vcov', 'dam.vcov', 'int.vcov', 'resid.vcov'),
-  file = format(end, 'Model_outputs/Model_III_plots_%Y%m%d_%H%M.pdf')
+  file = format(end, 'Model_outputs/Model_II_plots_%Y%m%d_%H%M.pdf')
 )
 # 
 # 
