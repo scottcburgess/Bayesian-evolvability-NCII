@@ -6,8 +6,8 @@ source('0_misc_funcs.R')
 # MCMC parameters
 chains <- 6 #50
 adapt <- 100
-burnin <- 1000 #100000
-total.sample <- 1000 #8000 
+burnin <- 1000 #200000
+total.sample <- 1000 #5000 
 thin <- 1 #5000
 
 # Load data
@@ -67,57 +67,50 @@ hatch_settle.df <- hatch_settle.df |>
     dam = as.numeric(factor(dam)),
     interaction = as.numeric(factor(interaction))
   )
-    
+
 h.df <- filter(hatch_settle.df, metric == 'hatching') 
 sh.df <- filter(hatch_settle.df, metric == 'settling')
 
+model.data <- list(
+  n.blocks = n_distinct(trunk_tail.df$block),
+  n.sires = n_distinct(trunk_tail.df$sire),
+  n.dams = n_distinct(trunk_tail.df$dam),
+  n.int = n_distinct(trunk_tail.df$interaction),
+  n.larvae = nrow(trunk_tail.df),
+  tt.block = trunk_tail.df$block,
+  tt.sire = trunk_tail.df$sire,
+  tt.dam = trunk_tail.df$dam,
+  tt.int = trunk_tail.df$interaction,
+  block.mean.range = cbind(
+    round(range(trunk_tail.df$trunk)), 
+    round(range(trunk_tail.df$tail)),
+    qlogis(c(0.2, 0.95))
+  ),
+  length = cbind(trunk_tail.df$trunk, trunk_tail.df$tail),
+  n.hatch = nrow(h.df),
+  h.block = h.df$block,
+  h.sire = h.df$sire,
+  h.dam = h.df$dam,
+  h.int = h.df$interaction,
+  hatch = h.df$outcome,
+  n.settle_hatch = nrow(sh.df),
+  sh.block = sh.df$block,
+  sh.sire = sh.df$sire,
+  sh.dam = sh.df$dam,
+  sh.int = sh.df$interaction,
+  settle_hatch = sh.df$outcome
+)
+
 # Run model
 post <- run.jags(
-  data = list(
-    n.blocks = n_distinct(trunk_tail.df$block),
-    n.sires = n_distinct(trunk_tail.df$sire),
-    n.dams = n_distinct(trunk_tail.df$dam),
-    n.int = n_distinct(trunk_tail.df$interaction),
-    n.larvae = nrow(trunk_tail.df),
-    tt.block = trunk_tail.df$block,
-    tt.sire = trunk_tail.df$sire,
-    tt.dam = trunk_tail.df$dam,
-    tt.int = trunk_tail.df$interaction,
-    block.mean.range = cbind(
-      round(range(trunk_tail.df$trunk)), 
-      round(range(trunk_tail.df$tail)),
-      qlogis(c(0.2, 0.95))
-    ),
-    length1 = cbind(trunk_tail.df$trunk, trunk_tail.df$tail),
-    length2 = cbind(trunk_tail.df$trunk, trunk_tail.df$tail),
-    length3 = cbind(trunk_tail.df$trunk, trunk_tail.df$tail),
-    n.hatch = nrow(h.df),
-    h.block = h.df$block,
-    h.sire = h.df$sire,
-    h.dam = h.df$dam,
-    h.int = h.df$interaction,
-    hatch = h.df$outcome,
-    n.settle_hatch = nrow(sh.df),
-    sh.block = sh.df$block,
-    sh.sire = sh.df$sire,
-    sh.dam = sh.df$dam,
-    sh.int = sh.df$interaction,
-    settle_hatch = sh.df$outcome
-  ),
+  data = model.data,
   model = 'model {
     # ---- trunk and tail specific priors ----
     for(t in 1:2) {  
-      # ---- prior for overall mean and variance ----
-      mean.overall[t] ~ dunif(block.mean.range[1, t], block.mean.range[2, t])
-      var.overall[t] ~ dunif(0, 1e5)
-      
       # ---- priors for block and effect means ----
       for(b in 1:n.blocks) {
-        overall.block.mean[b, t] ~ dunif(block.mean.range[1, t], block.mean.range[2, t])
-        overall.block.var[b, t] ~ dunif(0, 1e5)
         block.mean[b, t] ~ dunif(block.mean.range[1, t], block.mean.range[2, t])
       }
-      
     }
     
     # ---- hatch and settle|hatch specific priors ----
@@ -181,13 +174,9 @@ post <- run.jags(
       int.eff[int, 1:4] ~ dmnorm.vcov(int.mean, int.vcov)
     }
     
-    # ---- trunk/tail likelihood ----
+    # ---- trunk/tail ----
     for(l in 1:n.larvae) {
       for(t in 1:2) {        
-        # likelihood of overall mean for computing evolvability
-        length1[l, t] ~ dnorm(mean.overall[t], 1 / var.overall[t])
-        length2[l, t] ~ dnorm(overall.block.mean[tt.block[l], t], 1 / overall.block.var[tt.block[l], t])
-        
         # expected mean for the l-th larvae and t-th trait
         length.mu[l, t] <- block.mean[tt.block[l], t] + 
           sire.eff[tt.sire[l], t] + 
@@ -195,33 +184,44 @@ post <- run.jags(
           int.eff[tt.int[l], t]
       }
       # likelihood of l-th larvae for both traits from multivariate normal
-      length3[l, ] ~ dmnorm.vcov(length.mu[l, 1:2], resid.vcov[1:2, 1:2])
-      
+      length[l, ] ~ dmnorm.vcov(length.mu[l, ], resid.vcov[1:2, 1:2])
       # draw for posterior predictive check
-      length.ppd[l, 1:2] ~ dmnorm.vcov(length.mu[l, 1:2], resid.vcov[1:2, 1:2])
+      length.ppd[l, 1:2] ~ dmnorm.vcov(length.mu[l, ], resid.vcov[1:2, 1:2])
     }
     
-    # ---- hatching likelihood ----
+    # ---- hatching ----
     for(h in 1:n.hatch) {
-      hatch.mu[h] <- block.mean[h.block[h], 3] + 
+      # expected probability of hatching 
+      hatch.p[h] <- ilogit(
+        block.mean[h.block[h], 3] + 
         sire.eff[h.sire[h], 3] + 
         dam.eff[h.dam[h], 3] +
         int.eff[h.int[h], 3]
-      hatch[h] ~ dbern(ilogit(hatch.mu[h]))
+      )
+      # likelihood of hatching
+      hatch[h] ~ dbern(hatch.p[h])
+      # draw for posterior predictive check
+      hatch.ppd[h] ~ dbern(hatch.p[h])
     }
     
-    # ---- settling|hatching likelihood ----
+    # ---- settling|hatching ----
     for(sh in 1:n.settle_hatch) {
-      settle_hatch.mu[sh] <- block.mean[sh.block[sh], 4] + 
+      # expected probability of settling|hatching
+      settle_hatch.p[sh] <- ilogit(
+        block.mean[sh.block[sh], 4] + 
         sire.eff[sh.sire[sh], 4] + 
         dam.eff[sh.dam[sh], 4] +
         int.eff[sh.int[sh], 4]
-      settle_hatch[sh] ~ dbern(ilogit(settle_hatch.mu[sh]))
+      )
+      # likelihod of settling|hatching
+      settle_hatch[sh] ~ dbern(settle_hatch.p[sh])
+      # draw for posterior predictive check
+      settle_hatch.ppd[sh] ~ dbern(settle_hatch.p[sh])
     }
   }',
   monitor = c(
-    'deviance', 'sire.vcov', 'dam.vcov', 'int.vcov', 
-    'resid.vcov', 'overall.block.mean', 'mean.overall'
+    'deviance', 'sire.vcov', 'dam.vcov', 'int.vcov', 'resid.vcov', 'block.mean', 
+    'length.ppd', 'hatch.ppd', 'settle_hatch.ppd'
   ), 
   inits = function() list(
     .RNG.name = 'lecuyer::RngStream',
@@ -241,35 +241,35 @@ elapsed <- swfscMisc::autoUnits(post$timetaken)
 
 # Extract posterior to list of arrays - p
 p <- swfscMisc::runjags2list(post)
-dimnames(p$overall.block.mean)[[2]] <- 
-  dimnames(p$mean.overall)[[1]] <- c('Trunk', 'Tail')
+names.2 <- c('Trunk', 'Tail')
+names.4 <- c(names.2, 'Hatch', 'Settle|Hatch')
 dimnames(p$sire.vcov) <-
   dimnames(p$dam.vcov) <-
   dimnames(p$int.vcov) <- 
-  dimnames(p$resid.vcov) <- list(
-    c('Trunk', 'Tail', 'Hatch', 'Settle|Hatch'), 
-    c('Trunk', 'Tail', 'Hatch', 'Settle|Hatch')
-  )
+  dimnames(p$resid.vcov) <- list(names.4, names.4)
+dimnames(p$block.mean)[[2]] <- names.4
+dimnames(p$length.ppd)[[2]] <- names.2
 
 # Add QG metrics to list
 p <- addQGmetrics(p)
 
-# 
-# # Compute heritability and evolvability based on deVillemereuil et al 2016
-# qgparams.post <- sapply(dimnames(p$pr.overall)[[1]], function(m) {
-#   parallel::mclapply(1:dim(p$VA)[3], function(i) {
-#     QGglmm::QGparams(
-#       var.a = p$VA[m, m, i],
-#       var.p = p$VP[m, m, i],
-#       predict = qlogis(p$pr.block[, m, i]),
-#       model = 'binom1.logit',
-#       verbose = FALSE
-#     )
-#   }, mc.cores = 14) |> 
-#     bind_rows() |> 
-#     mutate(E = var.a.obs / (p$pr.overall[m, ] ^ 2))
-# }, simplify = FALSE)
-# 
+
+# Compute heritability and evolvability based on deVillemereuil et al 2016
+qgparams.post <- parallel::mclapply(1:dim(p$VA)[3], function(rep) {
+    sapply(
+    QGglmm::QGparams(
+      mu = p$block.mean[b, m, i],
+      var.a = p$VA[m, m, i],
+      var.p = p$VP[m, m, i],
+      predict = qlogis(p$pr.block[, m, i]),
+      model = 'binom1.logit',
+      verbose = FALSE
+    )
+  }, mc.cores = 14) |>
+    # bind_rows() |>
+    # mutate(E = var.a.obs / (p$pr.overall[m, ] ^ 2))
+}, simplify = FALSE)
+
 # p$H <- t(sapply(qgparams.post, function(x) x$h2.obs))
 # p$E <- t(sapply(qgparams.post, function(x) x$E))
 # 
