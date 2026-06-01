@@ -140,10 +140,8 @@ addQGmetrics <- function(p) {
   p$VM <- p$dam.vcov - p$sire.vcov
   p$VD <- 4 * p$int.vcov
   p$VP <- p$sire.vcov + p$dam.vcov + p$int.vcov
-  if(!is.null(p$resid.vcov)) {
-    p$VP <- p$VP + p$resid.vcov
-    p$VR <- p$resid.vcov
-  }
+  p$VP <- p$VP + p$resid.vcov
+  p$VR <- p$resid.vcov
   p$H <- p$VA / p$VP
   p
 }

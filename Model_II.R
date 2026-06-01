@@ -3,18 +3,24 @@ library(tidyverse)
 library(runjags)
 source('0_misc_funcs.R')
 
-# MCMC parameters
+start <- Sys.time()
+
+# ---- MCMC parameters
 chains <- 6 #50
 adapt <- 100
-burnin <- 1000 #200000
+burnin <- 1000 #500000
 total.sample <- 1000 #5000 
 thin <- 1 #5000
 
-# Load data
+
+# Load data ---------------------------------------------------------------
+
 trunk_tail.df <- readRDS('Data/trunk_tail_data.rds') 
 hatch_settle.df <- readRDS('Data/hatch_settle_data.rds') 
 
-# Select blocks and interactions to shared between trunk/tail and hatching/settling data
+
+# Select shared blocks and interactions -----------------------------------
+
 blocks <- hatch_settle.df |> 
   group_by(block) |> 
   summarize(
@@ -28,6 +34,9 @@ blocks <- hatch_settle.df |>
 
 interactions <- intersect(trunk_tail.df$interaction, hatch_settle.df$interaction)
 
+
+# Format model data -------------------------------------------------------
+
 trunk_tail.df <- trunk_tail.df |> 
   # filter trunk/tail data for blocks and interactions to use
   filter(interaction %in% interactions & block %in% blocks) |> 
@@ -37,27 +46,6 @@ trunk_tail.df <- trunk_tail.df |>
     dam = as.numeric(factor(dam)),
     interaction = as.numeric(factor(interaction))
   )
-
-
-# hatch_settle.df <- hatch_settle.df |> 
-#   # filter hatching/settling data for blocks and interactions to use 
-#   filter(interaction %in% interactions & block %in% blocks) |> 
-#   mutate(
-#     block = as.numeric(factor(block)),
-#     sire = as.numeric(factor(sire))
-#   ) |> 
-#   # compress to number of successes and trials for hatching and settling by interaction
-#   group_by(block, sire) |> 
-#   summarize(
-#     n.hatched.trial = sum(metric == 'hatching'),
-#     n.hatched = sum(metric == 'hatching' & outcome == 1),
-#     pct.hatched = n.hatched / n.hatched.trial,
-#     n.settled.hatched.trial = sum(metric == 'settling'),
-#     n.settled.hatched = sum(metric == 'settling' & outcome == 1),
-#     pct.settled.hatched= n.settled.hatched / n.settled.hatched.trial,
-#     pr.settle = pct.hatched * pct.settled.hatched,
-#     .groups = 'drop'
-#   )
 
 hatch_settle.df <- hatch_settle.df |> 
   filter(interaction %in% interactions & block %in% blocks) |> 
@@ -86,7 +74,7 @@ model.data <- list(
     round(range(trunk_tail.df$tail)),
     qlogis(c(0.2, 0.95))
   ),
-  length = cbind(trunk_tail.df$trunk, trunk_tail.df$tail),
+  length = cbind(Trunk = trunk_tail.df$trunk, Tail = trunk_tail.df$tail),
   n.hatch = nrow(h.df),
   h.block = h.df$block,
   h.sire = h.df$sire,
@@ -101,7 +89,9 @@ model.data <- list(
   settle_hatch = sh.df$outcome
 )
 
-# Run model
+
+# ---- Run model
+
 post <- run.jags(
   data = model.data,
   model = 'model {
@@ -220,8 +210,8 @@ post <- run.jags(
     }
   }',
   monitor = c(
-    'deviance', 'sire.vcov', 'dam.vcov', 'int.vcov', 'resid.vcov', 'block.mean', 
-    'length.ppd', 'hatch.ppd', 'settle_hatch.ppd'
+    'deviance', 'sire.vcov', 'dam.vcov', 'int.vcov', 'resid.vcov', 
+    'block.mean', 'length.ppd', 'hatch.ppd', 'settle_hatch.ppd'
   ), 
   inits = function() list(
     .RNG.name = 'lecuyer::RngStream',
@@ -236,11 +226,12 @@ post <- run.jags(
   method = 'parallel',
   summarise = FALSE
 )
-end <- Sys.time()
-elapsed <- swfscMisc::autoUnits(post$timetaken)
 
-# Extract posterior to list of arrays - p
+
+# Extract posterior to named list of arrays: p -----------------------------
+
 p <- swfscMisc::runjags2list(post)
+
 names.2 <- c('Trunk', 'Tail')
 names.4 <- c(names.2, 'Hatch', 'Settle|Hatch')
 dimnames(p$sire.vcov) <-
@@ -250,130 +241,168 @@ dimnames(p$sire.vcov) <-
 dimnames(p$block.mean)[[2]] <- names.4
 dimnames(p$length.ppd)[[2]] <- names.2
 
-# Add QG metrics to list
+# add QG metrics to list
+p$resid.vcov[c('Hatch', 'Settle|Hatch'), , ] <- 
+  p$resid.vcov[, c('Hatch', 'Settle|Hatch'), ] <- 0
 p <- addQGmetrics(p)
 
 
-# Compute heritability and evolvability based on deVillemereuil et al 2016
-qgparams.post <- parallel::mclapply(1:dim(p$VA)[3], function(rep) {
-    sapply(
-    QGglmm::QGparams(
-      mu = p$block.mean[b, m, i],
-      var.a = p$VA[m, m, i],
-      var.p = p$VP[m, m, i],
-      predict = qlogis(p$pr.block[, m, i]),
-      model = 'binom1.logit',
-      verbose = FALSE
-    )
-  }, mc.cores = 14) |>
-    # bind_rows() |>
-    # mutate(E = var.a.obs / (p$pr.overall[m, ] ^ 2))
-}, simplify = FALSE)
+# QGmvparams: compute posterior on observed scale -------------------------
 
-# p$H <- t(sapply(qgparams.post, function(x) x$h2.obs))
-# p$E <- t(sapply(qgparams.post, function(x) x$E))
-# 
-# 
-# beta <- sapply(1:dim(p$pr.settle.sire.eff)[2], function(i) {
-#   s_g <- 16 * c(
-#     cov(p$sire.eff[, 'Trunk', i], p$pr.settle.sire.eff[, i]),
-#     cov(p$sire.eff[, 'Tail', i], p$pr.settle.sire.eff[, i])
-#   )
-#   inv.G <- solve(p$VA[, , i])
-#   beta <- inv.G %*% s_g
-#   setNames(
-#     c(s_g, beta[, 1]),
-#     c('s_g.trunk.settle', 's_g.tail.settle', 'beta.trunk', 'beta.tail')
-#   )
-# }) |> 
-#   t()
-# 
-# 
+# iterate over every posterior sample
+qgparams.post <- parallel::mclapply(1:dim(p$VA)[3], function(i) { 
+  # iterate over blocks
+  lapply(1:dim(p$block.mean)[1], function(b) {
+    QGglmm::QGmvparams(
+      mu = p$block.mean[b, , i],
+      vcv.G = p$VA[, , i],
+      vcv.P = p$VP[, , i],
+      models = c('Gaussian', 'Gaussian', 'binom1.logit', 'binom1.logit'),
+      verbose = FALSE
+    ) 
+  }) |> 
+    list_transpose(simplify = FALSE)
+}, mc.cores = chains) |> 
+  list_transpose(simplify = FALSE)
+
+# format 3D array of block means [metric, block, sample]
+block.mean.obs <- do.call(
+  abind::abind,
+  c(
+    lapply(qgparams.post$mean.obs, abind::abind, along = 2), 
+    list(along = 3)
+  )
+)
+dimnames(block.mean.obs)[[1]] <- names.4
+
+# format 4D array of G matrices [metric, metric, block, sample]
+vcv.G.obs <- do.call(
+  abind::abind,
+  c(
+    lapply(qgparams.post$vcv.G.obs, abind::abind, along = 3),
+    list(along = 4)
+  )
+)
+dimnames(vcv.G.obs)[1:2] <- list(names.4, names.4)
+
+# format 4D array of P matrices [metric, metric, block, sample]
+vcv.P.obs <- do.call(
+  abind::abind,
+  c(
+    lapply(qgparams.post$vcv.P.obs, abind::abind, along = 3),
+    list(along = 4)
+  )
+)
+dimnames(vcv.P.obs)[1:2] <- list(names.4, names.4)
+
+
+# Summarize QGmvparams posteriors -----------------------------------------
+
+# median and HDI of mean.obs for each block
+block.mean.obs.smry <- block.mean.obs |> 
+  apply(c(1, 2), function(x) c(median = median(x), HDInterval::hdi(x))) |> 
+  aperm(c(3, 2, 1))
+
+# median and HDI of VG across blocks
+vcv.G.obs.smry <- vcv.G.obs |> 
+  apply(c(1, 2), function(x) {
+    x <- as.vector(x)
+    c(median = median(x), HDInterval::hdi(x))
+  }) |> 
+  aperm(c(3, 2, 1))
+
+# median and HDI of VP across blocks
+vcv.P.obs.smry <- vcv.P.obs |> 
+  apply(c(1, 2), function(x) {
+    x <- as.vector(x)
+    c(median = median(x), HDInterval::hdi(x))
+  }) |> 
+  aperm(c(3, 2, 1))
+
+
 # CODA summary ------------------------------------------------------------
 
 post.smry <- smrzPost(
   post, 
   c('deviance', 'sire.vcov', 'dam.vcov', 'int.vcov', 'resid.vcov')
 )
-# 
-# 
-# # Posterior Predictive Check ----------------------------------------------
-# 
-# length.obs <- cbind(Trunk = trunk_tail.df$trunk, Tail = trunk_tail.df$tail)
-# 
-# ppc <- expand_grid(
-#   metric = colnames(length.obs),
-#   id = 1:nrow(length.obs)
-# ) |> 
-#   mutate(metric = factor(metric, colnames(length.obs))) |> 
-#   bind_rows(
-#     data.frame(metric = 'Hatching', id = 1:nrow(hatch_settle.df)),
-#     data.frame(metric = 'Settling.Hatching', id = 1:nrow(hatch_settle.df))
-#   )
-# 
-# ppc <- ppc |> 
-#   cbind(sapply(1:nrow(ppc), function(i) {
-#     id <- ppc$id[i]
-#     
-#     obs <- switch(
-#       ppc$metric[id],
-#       Hatching = hatch_settle.df$n.hatched[id],
-#       Settling.Hatching = hatch_settle.df$n.settled.hatched[id],
-#       length.obs[id, ppc$metric[id]]
-#     )
-#     
-#     ppd <- switch(
-#       ppc$metric[id],
-#       Hatching = p$hatch.ppd[id, ],
-#       Settling.Hatching = p$settle.hatch.ppd[id, ],
-#       p$length.ppd[id, ppc$metric[id], ]
-#     )
-#     
-#     c(pct.gte.obs = mean(obs >= ppd), mean.diff = mean(obs - ppd))
-#   }) |> 
-#     t()
-#   )
-# 
-# ppc.smry <- smrzPPC(ppc)
-# 
-# 
-# 
-# # Save all objects
-# save.image(format(end, 'Model_outputs/Model_III_posterior_%Y%m%d_%H%M.rdata'))
-# 
-# 
-# Plot posterior distributions
+
+
+# Posterior Predictive Check ----------------------------------------------
+
+ppc <- bind_rows(
+  data.frame(metric = rep('Trunk', nrow(model.data$length))),
+  data.frame(metric = rep('Tail', nrow(model.data$length))),
+  data.frame(metric = rep('Hatch', length(model.data$hatch))),
+  data.frame(metric = rep('Settle|Hatch', length(model.data$settle_hatch)))
+) |> 
+  mutate(id = 1:n(), .by = metric)
+
+ppc <- cbind(ppc, sapply(1:nrow(ppc), function(i) {
+  m <- ppc$metric[i]
+  id <- ppc$id[i]
+  
+  x <- switch(
+    m,
+    Hatch = list(obs = model.data$hatch[id], ppd = p$hatch.ppd[id, ]),
+    'Settle|Hatch' = list(obs = model.data$settle_hatch[id], ppd = p$settle_hatch.ppd[id, ]),
+    list(
+      obs = model.data$length[id, m],
+      ppd = p$length.ppd[id, m, ]
+    )
+  )
+  
+  c(pct.gte.obs = mean(x$obs >= x$ppd), mean.diff = mean(x$obs - x$ppd))
+}) |>
+  t()
+)
+
+ppc.smry <- smrzPPC(ppc)
+
+
+# Save all objects --------------------------------------------------------
+
+end <- Sys.time()
+save.image(format(end, 'Model_outputs/Model_III_posterior_%Y%m%d_%H%M.rdata'))
+ 
+
+# Plot posterior distributions --------------------------------------------
+
 plot(
   post,
   vars = c('deviance', 'sire.vcov', 'dam.vcov', 'int.vcov', 'resid.vcov'),
   file = format(end, 'Model_outputs/Model_II_plots_%Y%m%d_%H%M.pdf')
 )
-# 
-# 
-# # Plot diagnostics
-# pdf(format(end, "Model_outputs/Model_III_diagnostics_%Y%m%d_%H%M.pdf"))
-# 
-# ggplot(post.smry$post) +
-#   geom_histogram(aes(values), bins = 20) +
-#   facet_wrap(~diag, scales = 'free_x')
-# 
-# ggplot(ppc) +
-#   geom_histogram(aes(pct.gte.obs), binwidth = 0.05) +
-#   geom_vline(aes(xintercept = median.pct), data = ppc.smry, color = 'red') +
-#   geom_vline(aes(xintercept = lower.pct), data = ppc.smry, linetype = 'dashed', color = 'red') +
-#   geom_vline(aes(xintercept = upper.pct), data = ppc.smry, linetype = 'dashed', color = 'red') +
-#   facet_wrap(~ metric, scales = 'free') +
-#   labs(x = 'Percent of PPD >= Observed', y = 'Count')
-# 
-# ggplot(ppc) +
-#   geom_histogram(aes(mean.diff), bins = 50) +
-#   geom_vline(aes(xintercept = median.diff), data = ppc.smry, color = 'red') +
-#   geom_vline(aes(xintercept = lower.diff), data = ppc.smry, linetype = 'dashed', color = 'red') +
-#   geom_vline(aes(xintercept = upper.diff), data = ppc.smry, linetype = 'dashed', color = 'red') +
-#   facet_wrap(~ metric, scales = 'free') +
-#   labs(x = 'Metric Difference (Observed - PPD)', y = 'Count')
-# 
-# dev.off()
-# 
-# 
-# print(elapsed)
+
+
+# Plot diagnostics --------------------------------------------------------
+
+pdf(format(end, "Model_outputs/Model_III_diagnostics_%Y%m%d_%H%M.pdf"))
+
+ggplot(post.smry$post) +
+  geom_histogram(aes(values), bins = 20) +
+  facet_wrap(~diag, scales = 'free_x')
+
+ggplot(ppc) +
+  geom_histogram(aes(pct.gte.obs), binwidth = 0.05) +
+  geom_vline(aes(xintercept = median.pct), data = ppc.smry, color = 'red') +
+  geom_vline(aes(xintercept = lower.pct), data = ppc.smry, linetype = 'dashed', color = 'red') +
+  geom_vline(aes(xintercept = upper.pct), data = ppc.smry, linetype = 'dashed', color = 'red') +
+  facet_wrap(~ metric, scales = 'free') +
+  labs(x = 'Percent of PPD >= Observed', y = 'Count')
+
+ggplot(ppc) +
+  geom_histogram(aes(mean.diff), bins = 50) +
+  geom_vline(aes(xintercept = median.diff), data = ppc.smry, color = 'red') +
+  geom_vline(aes(xintercept = lower.diff), data = ppc.smry, linetype = 'dashed', color = 'red') +
+  geom_vline(aes(xintercept = upper.diff), data = ppc.smry, linetype = 'dashed', color = 'red') +
+  facet_wrap(~ metric, scales = 'free') +
+  labs(x = 'Metric Difference (Observed - PPD)', y = 'Count')
+
+dev.off()
+
+
+cat('Run start:', format(start))
+cat('Run end:', format(end))
+cat('Model elapsed:', format(swfscMisc::autoUnits(post$timetaken)))
+cat('Run elapsed: ', format(difftime(start, end)))
