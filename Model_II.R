@@ -8,7 +8,7 @@ start <- Sys.time()
 # ---- MCMC parameters
 chains <- 6 #50
 adapt <- 100
-burnin <- 1000 #500000
+burnin <- 500 #500000
 total.sample <- 1000 #5000 
 thin <- 1 #5000
 
@@ -19,51 +19,45 @@ trunk_tail.df <- readRDS('Data/trunk_tail_data.rds')
 hatch_settle.df <- readRDS('Data/hatch_settle_data.rds') 
 
 
-# Select shared blocks and interactions -----------------------------------
-
-blocks <- hatch_settle.df |> 
-  group_by(block) |> 
-  summarize(
-    n.hatch = sum(metric == 'hatching'),
-    n.settle = sum(metric == 'settling'),
-    .groups = 'drop'
-  ) |> 
-  filter(n.hatch > 0 & n.settle > 0) |> 
-  pull(block) |> 
-  unique()
-
-interactions <- intersect(trunk_tail.df$interaction, hatch_settle.df$interaction)
-
-
 # Format model data -------------------------------------------------------
 
-trunk_tail.df <- trunk_tail.df |> 
-  # filter trunk/tail data for blocks and interactions to use
-  filter(interaction %in% interactions & block %in% blocks) |> 
+blocks <- c(trunk_tail.df$block, hatch_settle.df$block) |> 
+  unique() |> 
+  sort()
+sires <- c(trunk_tail.df$sire, hatch_settle.df$sire) |> 
+  unique() |> 
+  sort()
+dams <- c(trunk_tail.df$dam, hatch_settle.df$dam) |> 
+  unique() |> 
+  sort()
+interactions <- c(trunk_tail.df$interaction, hatch_settle.df$interaction) |> 
+  unique() |> 
+  sort()
+
+trunk_tail.df <- trunk_tail.df |>  
   mutate(
-    block = as.numeric(factor(block)),
-    sire = as.numeric(factor(sire)),
-    dam = as.numeric(factor(dam)),
-    interaction = as.numeric(factor(interaction))
+    block = as.numeric(factor(block, levels = blocks)),
+    sire = as.numeric(factor(sire, levels = sires)),
+    dam = as.numeric(factor(dam, levels = dams)),
+    interaction = as.numeric(factor(interaction, levels = interactions))
   )
 
 hatch_settle.df <- hatch_settle.df |> 
-  filter(interaction %in% interactions & block %in% blocks) |> 
   mutate(
-    block = as.numeric(factor(block)),
-    sire = as.numeric(factor(sire)),
-    dam = as.numeric(factor(dam)),
-    interaction = as.numeric(factor(interaction))
+    block = as.numeric(factor(block, levels = blocks)),
+    sire = as.numeric(factor(sire, levels = sires)),
+    dam = as.numeric(factor(dam, levels = dams)),
+    interaction = as.numeric(factor(interaction, levels = interactions))
   )
 
 h.df <- filter(hatch_settle.df, metric == 'hatching') 
 sh.df <- filter(hatch_settle.df, metric == 'settling')
 
 model.data <- list(
-  n.blocks = n_distinct(trunk_tail.df$block),
-  n.sires = n_distinct(trunk_tail.df$sire),
-  n.dams = n_distinct(trunk_tail.df$dam),
-  n.int = n_distinct(trunk_tail.df$interaction),
+  n.blocks = length(blocks),
+  n.sires = length(sires),
+  n.dams = length(dams),
+  n.int = length(interactions),
   n.larvae = nrow(trunk_tail.df),
   tt.block = trunk_tail.df$block,
   tt.sire = trunk_tail.df$sire,
@@ -242,8 +236,8 @@ dimnames(p$block.mean)[[2]] <- names.4
 dimnames(p$length.ppd)[[2]] <- names.2
 
 # add QG metrics to list
-p$resid.vcov[c('Hatch', 'Settle|Hatch'), , ] <- 
-  p$resid.vcov[, c('Hatch', 'Settle|Hatch'), ] <- 0
+p$resid.vcov[c('Hatch', 'Settle|Hatch'), , ] <- 0
+p$resid.vcov[, c('Hatch', 'Settle|Hatch'), ] <- 0
 p <- addQGmetrics(p)
 
 
