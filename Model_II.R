@@ -238,6 +238,15 @@ dimnames(p$length.ppd)[[2]] <- names.2
 # add QG metrics to list
 p$resid.vcov[c('Hatch', 'Settle|Hatch'), , ] <- 0
 p$resid.vcov[, c('Hatch', 'Settle|Hatch'), ] <- 0
+for(m in dimnames(p$block.mean)[[2]]) {
+  b <- switch(
+    m, 
+    Hatch = setdiff(1:model.data$n.blocks, model.data$h.block),
+    'Settle|Hatch' = setdiff(1:model.data$n.blocks, model.data$sh.block),
+    setdiff(1:model.data$n.blocks, model.data$tt.block)
+  )
+  p$block.mean[b, m, ] <- NA
+}
 p <- addQGmetrics(p)
 
 
@@ -245,15 +254,28 @@ p <- addQGmetrics(p)
 
 # iterate over every posterior sample
 qgparams.post <- parallel::mclapply(1:dim(p$VA)[3], function(i) { 
+  # extract VA and VP matrices for this sample
+  VA <- p$VA[, , i]
+  VP <- p$VP[, , i]
   # iterate over blocks
   lapply(1:dim(p$block.mean)[1], function(b) {
-    QGglmm::QGmvparams(
-      mu = p$block.mean[b, , i],
-      vcv.G = p$VA[, , i],
-      vcv.P = p$VP[, , i],
-      models = c('Gaussian', 'Gaussian', 'binom1.logit', 'binom1.logit'),
+    mu <- p$block.mean[b, , i]
+    va <- VA
+    vp <- VP
+    # identify metrics without this block
+    not.missing <- which(!is.na(mu))
+    qg <- QGglmm::QGmvparams(
+      mu = mu[not.missing],
+      vcv.G = VA[not.missing, not.missing],
+      vcv.P = VP[not.missing, not.missing],
+      models = c('Gaussian', 'Gaussian', 'binom1.logit', 'binom1.logit')[not.missing],
       verbose = FALSE
     ) 
+    # reload results to original vectors/matrices to preserve NAs
+    mu[not.missing] <- qg$mean.obs
+    va[not.missing, not.missing] <- qg$vcv.G.obs
+    vp[not.missing, not.missing] <- qg$vcv.P.obs
+    list(mu.obs = mu, va.obs = va, vp.obs = vp)
   }) |> 
     list_transpose(simplify = FALSE)
 }, mc.cores = chains) |> 
@@ -263,53 +285,55 @@ qgparams.post <- parallel::mclapply(1:dim(p$VA)[3], function(i) {
 block.mean.obs <- do.call(
   abind::abind,
   c(
-    lapply(qgparams.post$mean.obs, abind::abind, along = 2), 
+    lapply(qgparams.post$mu.obs, abind::abind, along = 2), 
     list(along = 3)
   )
 )
 dimnames(block.mean.obs)[[1]] <- names.4
 
-# format 4D array of G matrices [metric, metric, block, sample]
-vcv.G.obs <- do.call(
+# format 4D array of VA matrices [metric, metric, block, sample]
+va.obs <- do.call(
   abind::abind,
   c(
-    lapply(qgparams.post$vcv.G.obs, abind::abind, along = 3),
+    lapply(qgparams.post$va.obs, abind::abind, along = 3),
     list(along = 4)
   )
 )
-dimnames(vcv.G.obs)[1:2] <- list(names.4, names.4)
+dimnames(va.obs)[1:2] <- list(names.4, names.4)
 
-# format 4D array of P matrices [metric, metric, block, sample]
-vcv.P.obs <- do.call(
+# format 4D array of VP matrices [metric, metric, block, sample]
+vp.obs <- do.call(
   abind::abind,
   c(
-    lapply(qgparams.post$vcv.P.obs, abind::abind, along = 3),
+    lapply(qgparams.post$vp.obs, abind::abind, along = 3),
     list(along = 4)
   )
 )
-dimnames(vcv.P.obs)[1:2] <- list(names.4, names.4)
+dimnames(vp.obs)[1:2] <- list(names.4, names.4)
 
 
 # Summarize QGmvparams posteriors -----------------------------------------
 
 # median and HDI of mean.obs for each block
 block.mean.obs.smry <- block.mean.obs |> 
-  apply(c(1, 2), function(x) c(median = median(x), HDInterval::hdi(x))) |> 
+  apply(c(1, 2), function(x) {
+    c(median = median(x, na.rm = TRUE), HDInterval::hdi(x))
+  }) |> 
   aperm(c(3, 2, 1))
 
-# median and HDI of VG across blocks
-vcv.G.obs.smry <- vcv.G.obs |> 
+# median and HDI of VA across blocks
+va.obs.smry <- va.obs |> 
   apply(c(1, 2), function(x) {
     x <- as.vector(x)
-    c(median = median(x), HDInterval::hdi(x))
+    c(median = median(x, na.rm = TRUE), HDInterval::hdi(x))
   }) |> 
   aperm(c(3, 2, 1))
 
 # median and HDI of VP across blocks
-vcv.P.obs.smry <- vcv.P.obs |> 
+vp.obs.smry <- va.obs |> 
   apply(c(1, 2), function(x) {
     x <- as.vector(x)
-    c(median = median(x), HDInterval::hdi(x))
+    c(median = median(x, na.rm = TRUE), HDInterval::hdi(x))
   }) |> 
   aperm(c(3, 2, 1))
 
@@ -358,7 +382,7 @@ ppc.smry <- smrzPPC(ppc)
 
 end <- Sys.time()
 save.image(format(end, 'Model_outputs/Model_III_posterior_%Y%m%d_%H%M.rdata'))
- 
+
 
 # Plot posterior distributions --------------------------------------------
 
@@ -399,4 +423,4 @@ dev.off()
 cat('Run start:', format(start))
 cat('Run end:', format(end))
 cat('Model elapsed:', format(swfscMisc::autoUnits(post$timetaken)))
-cat('Run elapsed: ', format(difftime(start, end)))
+cat('Run elapsed: ', format(difftime(end, start)))
