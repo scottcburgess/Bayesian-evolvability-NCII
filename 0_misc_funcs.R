@@ -1,5 +1,17 @@
 vecSmry <- function(x) { 
   library(tidyverse)
+  x <- x |> 
+    as.vector() |> 
+    na.omit()
+  
+  if(length(x) == 0) {
+    smry <- setNames(
+      rep(NA, 7),
+      c('lower.hdi', 'median', 'mode', 'upper.hdi', 'pr.lt.hdi', 'pr.gt.hdi', '5pc.exceeds')
+    )
+    return(smry)
+  }
+  
   smry <- setNames(
     c(median(x), modeest::mlv(x, method = "venter"), HDInterval::hdi(x)),
     c("median", "mode", "lower.hdi", "upper.hdi")
@@ -147,66 +159,66 @@ addQGmetrics <- function(p) {
 }
 
 
-# Use QGglmm to extract full variance/covariance matrix on observed scale
-convertVCVscale.II <- function(metric, p) {
-  vcv <- parallel::mclapply(1:dim(p[[metric]])[3], function(i) {
-    QGglmm::QGmvparams(
-      vcv.G = p[[metric]][, , i],
-      vcv.P = p$VP[, , i],
-      predict = qlogis(p$pr.block[, , i]),
-      models = c('binom1.logit', 'binom1.logit'),
-      verbose = FALSE
-    )
-  }, mc.cores = 10) |> 
-    purrr::list_transpose()
-  
-  sapply(vcv, function(x) {
-    if(is.null(dim(x[[1]]))) {
-      x <- do.call(rbind, x)
-      colnames(x) <- dimnames(p[[metric]])[[1]]
-      x
-    } else {
-      do.call(
-        abind::abind, 
-        c(x, list(along = 3, new.names = dimnames(p[[metric]])))
-      )
-    }
-  })
-}
-
-
-# Use QGglmm to extract full variance/covariance matrix on observed scale
-convertVCVscale.III <- function(p) {
-  # Run QGmvparams across iterations
-  vcv <- parallel::mclapply(
-    X = seq_len(dim(p$VA)[3]),
-    FUN = function(i) {
-      QGglmm::QGmvparams(
-        vcv.G   = p$VA[, , i],
-        vcv.P   = p$VP[, , i],
-        predict = p$overall.block.mean[, , i],
-        models  = c("Gaussian", "Gaussian", "binom1.logit"),
-        verbose = FALSE
-      )
-    },
-    mc.cores = 10
-  ) |> purrr::list_transpose()
-  
-  # Collapse results into matrices or arrays
-  lapply(vcv, function(x) {
-    if(is.null(dim(x[[1]]))) {
-      out <- do.call(rbind, x)
-      dimnames(out) <- list(
-        iter  = dimnames(p$VA)[[3]],
-        trait = dimnames(p$VA)[[1]]
-      )
-    } else {
-      out <- abind::abind(x, along = 3)
-      dimnames(out)[[3]] <- dimnames(p$VA)[[3]]
-    }
-    out
-  })
-}
+# # Use QGglmm to extract full variance/covariance matrix on observed scale
+# convertVCVscale.II <- function(metric, p) {
+#   vcv <- parallel::mclapply(1:dim(p[[metric]])[3], function(i) {
+#     QGglmm::QGmvparams(
+#       vcv.G = p[[metric]][, , i],
+#       vcv.P = p$VP[, , i],
+#       predict = qlogis(p$pr.block[, , i]),
+#       models = c('binom1.logit', 'binom1.logit'),
+#       verbose = FALSE
+#     )
+#   }, mc.cores = 10) |> 
+#     purrr::list_transpose()
+#   
+#   sapply(vcv, function(x) {
+#     if(is.null(dim(x[[1]]))) {
+#       x <- do.call(rbind, x)
+#       colnames(x) <- dimnames(p[[metric]])[[1]]
+#       x
+#     } else {
+#       do.call(
+#         abind::abind, 
+#         c(x, list(along = 3, new.names = dimnames(p[[metric]])))
+#       )
+#     }
+#   })
+# }
+# 
+# 
+# # Use QGglmm to extract full variance/covariance matrix on observed scale
+# convertVCVscale.III <- function(p) {
+#   # Run QGmvparams across iterations
+#   vcv <- parallel::mclapply(
+#     X = seq_len(dim(p$VA)[3]),
+#     FUN = function(i) {
+#       QGglmm::QGmvparams(
+#         vcv.G   = p$VA[, , i],
+#         vcv.P   = p$VP[, , i],
+#         predict = p$overall.block.mean[, , i],
+#         models  = c("Gaussian", "Gaussian", "binom1.logit"),
+#         verbose = FALSE
+#       )
+#     },
+#     mc.cores = 10
+#   ) |> purrr::list_transpose()
+#   
+#   # Collapse results into matrices or arrays
+#   lapply(vcv, function(x) {
+#     if(is.null(dim(x[[1]]))) {
+#       out <- do.call(rbind, x)
+#       dimnames(out) <- list(
+#         iter  = dimnames(p$VA)[[3]],
+#         trait = dimnames(p$VA)[[1]]
+#       )
+#     } else {
+#       out <- abind::abind(x, along = 3)
+#       dimnames(out)[[3]] <- dimnames(p$VA)[[3]]
+#     }
+#     out
+#   })
+# }
 
 # summarize posterior sample and create diagnostics summary
 smrzPost <- function(post, v) {
@@ -233,12 +245,12 @@ smrzPPC <- function(ppc) {
   ppc |> 
     group_by(metric) |> 
     summarize(
-      median.pct = median(pct.gte.obs),
-      lower.pct = unname(quantile(pct.gte.obs, 0.025)),
-      upper.pct = unname(quantile(pct.gte.obs, 0.975)),   
-      median.diff = median(mean.diff),
-      lower.diff = unname(quantile(mean.diff, 0.025)),
-      upper.diff = unname(quantile(mean.diff, 0.975)),
+      median.pct = median(pct.gte.obs, na.rm = TRUE),
+      lower.pct = unname(quantile(pct.gte.obs, 0.025, na.rm = TRUE)),
+      upper.pct = unname(quantile(pct.gte.obs, 0.975, na.rm = TRUE)),   
+      median.diff = median(mean.diff, na.rm = TRUE),
+      lower.diff = unname(quantile(mean.diff, 0.025, na.rm = TRUE)),
+      upper.diff = unname(quantile(mean.diff, 0.975, na.rm = TRUE)),
       .groups = 'drop'
     )
 }

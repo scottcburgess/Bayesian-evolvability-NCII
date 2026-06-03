@@ -68,7 +68,8 @@ model.data <- list(
     round(range(trunk_tail.df$tail)),
     qlogis(c(0.2, 0.95))
   ),
-  length = cbind(Trunk = trunk_tail.df$trunk, Tail = trunk_tail.df$tail),
+  length1 = cbind(Trunk = trunk_tail.df$trunk, Tail = trunk_tail.df$tail),
+  length2 = cbind(Trunk = trunk_tail.df$trunk, Tail = trunk_tail.df$tail),
   n.hatch = nrow(h.df),
   h.block = h.df$block,
   h.sire = h.df$sire,
@@ -91,6 +92,10 @@ post <- run.jags(
   model = 'model {
     # ---- trunk and tail specific priors ----
     for(t in 1:2) {  
+      # ---- prior for overall mean and variance ----
+      overall.mean[t] ~ dunif(block.mean.range[1, t], block.mean.range[2, t])
+      overall.var[t] ~ dunif(0, 1e5)
+      
       # ---- priors for block and effect means ----
       for(b in 1:n.blocks) {
         block.mean[b, t] ~ dunif(block.mean.range[1, t], block.mean.range[2, t])
@@ -148,7 +153,7 @@ post <- run.jags(
       sire.eff[s, 1:4] ~ dmnorm.vcov(sire.mean, sire.vcov)
     }
     
-    # ---- draw maternal effect (for each dam) ----
+    # ---- draw additive dam effect (for each dam) ----
     for(d in 1:n.dams) {
       dam.eff[d, 1:4] ~ dmnorm.vcov(dam.mean, dam.vcov)
     }
@@ -160,7 +165,10 @@ post <- run.jags(
     
     # ---- trunk/tail ----
     for(l in 1:n.larvae) {
-      for(t in 1:2) {        
+      for(t in 1:2) {      
+        # likelihood of overall mean for computing evolvability
+        length1[l, t] ~ dnorm(overall.mean[t], 1 / overall.var[t])
+        
         # expected mean for the l-th larvae and t-th trait
         length.mu[l, t] <- block.mean[tt.block[l], t] + 
           sire.eff[tt.sire[l], t] + 
@@ -168,7 +176,7 @@ post <- run.jags(
           int.eff[tt.int[l], t]
       }
       # likelihood of l-th larvae for both traits from multivariate normal
-      length[l, ] ~ dmnorm.vcov(length.mu[l, ], resid.vcov[1:2, 1:2])
+      length2[l, ] ~ dmnorm.vcov(length.mu[l, ], resid.vcov[1:2, 1:2])
       # draw for posterior predictive check
       length.ppd[l, 1:2] ~ dmnorm.vcov(length.mu[l, ], resid.vcov[1:2, 1:2])
     }
@@ -197,7 +205,7 @@ post <- run.jags(
         dam.eff[sh.dam[sh], 4] +
         int.eff[sh.int[sh], 4]
       )
-      # likelihod of settling|hatching
+      # likelihood of settling|hatching
       settle_hatch[sh] ~ dbern(settle_hatch.p[sh])
       # draw for posterior predictive check
       settle_hatch.ppd[sh] ~ dbern(settle_hatch.p[sh])
@@ -205,7 +213,7 @@ post <- run.jags(
   }',
   monitor = c(
     'deviance', 'sire.vcov', 'dam.vcov', 'int.vcov', 'resid.vcov', 
-    'block.mean', 'length.ppd', 'hatch.ppd', 'settle_hatch.ppd'
+    'overall.mean', 'block.mean', 'length.ppd', 'hatch.ppd', 'settle_hatch.ppd'
   ), 
   inits = function() list(
     .RNG.name = 'lecuyer::RngStream',
@@ -232,6 +240,7 @@ dimnames(p$sire.vcov) <-
   dimnames(p$dam.vcov) <-
   dimnames(p$int.vcov) <- 
   dimnames(p$resid.vcov) <- list(names.4, names.4)
+dimnames(p$overall.mean)[[1]] <- names.2
 dimnames(p$block.mean)[[2]] <- names.4
 dimnames(p$length.ppd)[[2]] <- names.2
 
@@ -253,6 +262,7 @@ p <- addQGmetrics(p)
 # QGmvparams: compute posterior on observed scale -------------------------
 
 # iterate over every posterior sample
+# qgparams.post <- parallel::mclapply(sample(1:dim(p$VA)[3], 20), function(i) { 
 qgparams.post <- parallel::mclapply(1:dim(p$VA)[3], function(i) { 
   # extract VA and VP matrices for this sample
   VA <- p$VA[, , i]
@@ -314,28 +324,83 @@ dimnames(vp.obs)[1:2] <- list(names.4, names.4)
 
 # Summarize QGmvparams posteriors -----------------------------------------
 
-# median and HDI of mean.obs for each block
+# summary of mean.obs for each block
 block.mean.obs.smry <- block.mean.obs |> 
-  apply(c(1, 2), function(x) {
-    c(median = median(x, na.rm = TRUE), HDInterval::hdi(x))
-  }) |> 
-  aperm(c(3, 2, 1))
+  apply(c(1, 2), vecSmry) |> 
+  aperm(c(2, 1, 3))
 
-# median and HDI of VA across blocks
+# summary of VA across blocks
 va.obs.smry <- va.obs |> 
-  apply(c(1, 2), function(x) {
-    x <- as.vector(x)
-    c(median = median(x, na.rm = TRUE), HDInterval::hdi(x))
-  }) |> 
+  apply(c(1, 2), vecSmry) |> 
   aperm(c(3, 2, 1))
 
-# median and HDI of VP across blocks
+# summary of VP across blocks
 vp.obs.smry <- va.obs |> 
-  apply(c(1, 2), function(x) {
-    x <- as.vector(x)
-    c(median = median(x, na.rm = TRUE), HDInterval::hdi(x))
-  }) |> 
+  apply(c(1, 2), vecSmry) |> 
   aperm(c(3, 2, 1))
+
+
+# Evolvability ------------------------------------------------------------
+
+# Calculate average evolvability parameters of the G-matrix
+e.params_means <- do.call(
+  rbind,
+  parallel::mclapply(1:dim(p$VA)[3], function(i) {
+    evolvability::evolvabilityMeans(
+      G = as.vector(p$VA[names.2, names.2 , i]),
+      means = p$overall.mean[, i]
+    )
+  }, mc.cores = 14) 
+)
+
+# Calculate posterior distribution of evolvability parameters 
+# from a random set of selection gradients  
+e.params_BetaMCMC <- evolvability::evolvabilityBetaMCMC(
+  G_mcmc = evolvability::meanStdGMCMC(
+    t(apply(p$VA[names.2, names.2, ], 3, as.vector)),
+    t(p$overall.mean)
+  ),
+  Beta = evolvability::randomBeta(1000, 2),
+  post.dist = TRUE
+)
+
+# Calculate evolvability parameters 
+# along a specific set of selection gradients
+B <- matrix(
+  c(
+    c(0, 1), # strong selection for long tails only, 
+    c(-(1/sqrt(2)), -(1/sqrt(2))), # strong selection for short trunks and short tails
+    c((1/sqrt(2)), -(1/sqrt(2))) # strong selection for large trunks and small tails
+  ), 
+  nrow = 2, 
+  ncol = 3
+)
+
+e.params_beta <- do.call(
+  rbind,
+  parallel::mclapply(1:dim(p$VA)[3], function(i) {
+    do.call(
+      rbind,
+      lapply(1:ncol(B), function(j) {
+        tmp <- evolvability::evolvabilityBeta(
+          G = p$VA[names.2, names.2, i],
+          Beta = B[, j],
+          means = p$overall.mean[, i]
+        )
+        data.frame(
+          sample = i,           
+          Beta_index = j,       
+          e = tmp$e,
+          r = tmp$r,
+          c = tmp$c,
+          a = tmp$a,
+          i = tmp$i
+        )
+      })
+    )
+  }, mc.cores = 14)
+)
+rownames(e.params_beta) <- NULL
 
 
 # CODA summary ------------------------------------------------------------
@@ -349,8 +414,8 @@ post.smry <- smrzPost(
 # Posterior Predictive Check ----------------------------------------------
 
 ppc <- bind_rows(
-  data.frame(metric = rep('Trunk', nrow(model.data$length))),
-  data.frame(metric = rep('Tail', nrow(model.data$length))),
+  data.frame(metric = rep('Trunk', nrow(model.data$length1))),
+  data.frame(metric = rep('Tail', nrow(model.data$length1))),
   data.frame(metric = rep('Hatch', length(model.data$hatch))),
   data.frame(metric = rep('Settle|Hatch', length(model.data$settle_hatch)))
 ) |> 
@@ -370,7 +435,10 @@ ppc <- cbind(ppc, sapply(1:nrow(ppc), function(i) {
     )
   )
   
-  c(pct.gte.obs = mean(x$obs >= x$ppd), mean.diff = mean(x$obs - x$ppd))
+  c(
+    pct.gte.obs = mean(x$obs >= x$ppd, na.rm = TRUE), 
+    mean.diff = mean(x$obs - x$ppd, na.rm = TRUE)
+  )
 }) |>
   t()
 )
@@ -381,7 +449,7 @@ ppc.smry <- smrzPPC(ppc)
 # Save all objects --------------------------------------------------------
 
 end <- Sys.time()
-save.image(format(end, 'Model_outputs/Model_III_posterior_%Y%m%d_%H%M.rdata'))
+save.image(format(end, 'Model_outputs/Model_II_posterior_%Y%m%d_%H%M.rdata'))
 
 
 # Plot posterior distributions --------------------------------------------
@@ -420,7 +488,10 @@ ggplot(ppc) +
 dev.off()
 
 
-cat('Run start:', format(start))
-cat('Run end:', format(end))
-cat('Model elapsed:', format(swfscMisc::autoUnits(post$timetaken)))
-cat('Run elapsed: ', format(difftime(end, start)))
+cat(
+  'Run start: ', format(start), '\n',
+  'Run end: ', format(end), '\n',
+  'Model elapsed: ', format(swfscMisc::autoUnits(post$timetaken)), '\n',
+  'Run elapsed: ', format(difftime(end, start)), '\n',
+  sep = ''
+)
