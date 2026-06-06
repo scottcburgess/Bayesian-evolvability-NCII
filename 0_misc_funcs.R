@@ -102,7 +102,7 @@ default_theme <- ggridges::theme_ridges() +
     plot.title = element_text(size = 10, face = "plain")
   )
 
-plot_func <- function(df, title, bw, breaks, max_x) {
+plot_func <- function(df, bw, breaks, max_x, title = NULL) {
   smry <- df |>
     group_by(param) |>
     summarise(summary_values = list(vecSmry(value)), .groups = 'drop') |>
@@ -159,70 +159,9 @@ addQGmetrics <- function(p) {
 }
 
 
-# # Use QGglmm to extract full variance/covariance matrix on observed scale
-# convertVCVscale.II <- function(metric, p) {
-#   vcv <- parallel::mclapply(1:dim(p[[metric]])[3], function(i) {
-#     QGglmm::QGmvparams(
-#       vcv.G = p[[metric]][, , i],
-#       vcv.P = p$VP[, , i],
-#       predict = qlogis(p$pr.block[, , i]),
-#       models = c('binom1.logit', 'binom1.logit'),
-#       verbose = FALSE
-#     )
-#   }, mc.cores = 10) |> 
-#     purrr::list_transpose()
-#   
-#   sapply(vcv, function(x) {
-#     if(is.null(dim(x[[1]]))) {
-#       x <- do.call(rbind, x)
-#       colnames(x) <- dimnames(p[[metric]])[[1]]
-#       x
-#     } else {
-#       do.call(
-#         abind::abind, 
-#         c(x, list(along = 3, new.names = dimnames(p[[metric]])))
-#       )
-#     }
-#   })
-# }
-# 
-# 
-# # Use QGglmm to extract full variance/covariance matrix on observed scale
-# convertVCVscale.III <- function(p) {
-#   # Run QGmvparams across iterations
-#   vcv <- parallel::mclapply(
-#     X = seq_len(dim(p$VA)[3]),
-#     FUN = function(i) {
-#       QGglmm::QGmvparams(
-#         vcv.G   = p$VA[, , i],
-#         vcv.P   = p$VP[, , i],
-#         predict = p$overall.block.mean[, , i],
-#         models  = c("Gaussian", "Gaussian", "binom1.logit"),
-#         verbose = FALSE
-#       )
-#     },
-#     mc.cores = 10
-#   ) |> purrr::list_transpose()
-#   
-#   # Collapse results into matrices or arrays
-#   lapply(vcv, function(x) {
-#     if(is.null(dim(x[[1]]))) {
-#       out <- do.call(rbind, x)
-#       dimnames(out) <- list(
-#         iter  = dimnames(p$VA)[[3]],
-#         trait = dimnames(p$VA)[[1]]
-#       )
-#     } else {
-#       out <- abind::abind(x, along = 3)
-#       dimnames(out)[[3]] <- dimnames(p$VA)[[3]]
-#     }
-#     out
-#   })
-# }
-
 # summarize posterior sample and create diagnostics summary
 smrzPost <- function(post, v) {
-  post.smry <- summary(post, vars = v) |>  
+  post.smry <- runjags::summary(post, vars = v) |>  
     as.data.frame() |> 
     rownames_to_column('metric') |>
     select(metric, SSeff:psrf) |> 

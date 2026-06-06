@@ -2,13 +2,13 @@ rm(list = ls())
 library(tidyverse)
 source('0_misc_funcs.R')
 
-load("Model_outputs/Model_I_posterior_20250930_0019.rdata")
+load("Model_outputs/posterior_20260605_0120.rdata")
 
 param.df <- param_df |> 
   mutate(
     pr.gt0 = sapply(
       param,
-      function(x) round(mean(p[[x]][1, 2, ] > 0), digits = 2)
+      function(x) round(mean(p[[x]]['Trunk', 'Tail', ] > 0), digits = 2)
     ),
     label = paste0(
       'atop(', 
@@ -33,8 +33,8 @@ ran_mvnorm <- function(vec) {
 smrz_matrix <- function(param, p) {
   # random multivariate normal draws from mean-centered covariance matrices
   mat <- evolvability::meanStdGMCMC(
-    t(apply(p[[param]], 3, as.vector)),
-    t(p$mean.overall)
+    t(apply(p[[param]][names.2, names.2, ], 3, as.vector)),
+    t(p$overall.mean)
   ) 
   
   rads <- apply(mat, 1, function(vec) {
@@ -44,7 +44,6 @@ smrz_matrix <- function(param, p) {
       pluck('vectors')
     atan2(eigenvectors[2, 1], eigenvectors[1, 1])
   })
-  
   
   pts <- apply(mat, 1, ran_mvnorm, simplify = FALSE) |> 
     bind_rows() 

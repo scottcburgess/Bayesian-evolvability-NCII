@@ -2,11 +2,10 @@ rm(list=ls())
 options(scipen = 999)
 library('tidyverse')
 library('ggridges')
-source('0_misc_funcs.R')
-
 
 # trunk Tail: load and prepare ----
-load("Model_outputs/Model_I_posterior_20250930_0019.rdata") 
+load("Model_outputs/posterior_20260605_0120.rdata") 
+source('0_misc_funcs.R')
 
 ## Panel A ----
 panelA <- e.params_beta |>

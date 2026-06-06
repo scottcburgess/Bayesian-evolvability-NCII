@@ -322,6 +322,30 @@ vp.obs <- do.call(
 dimnames(vp.obs)[1:2] <- list(names.4, names.4)
 
 
+sg.df <- expand.grid(
+  x = c('Trunk', 'Tail'), 
+  W = c('Hatch', 'Settle|Hatch'),
+  stringsAsFactors = FALSE
+)
+sg <- lapply(1:nrow(sg.df), function(i) {
+  sg.i <- sapply(1:dim(block.mean.obs)[2], function(b) {
+    # delta z = cov(x,W)/mean(W) = R = sg
+    va.obs[sg.df$x[i], sg.df$W[i], b, ] / block.mean.obs[sg.df$W[i], b, ]
+  }) |> 
+    t() |> 
+    as.data.frame() |> 
+    mutate(block = blocks) |> 
+    pivot_longer(-block, names_to = 'sample', values_to = 'sg') |> 
+    mutate(
+      x = sg.df$x[i],
+      W = sg.df$W[i],
+      sample = as.numeric(stringr::str_remove(sample, 'V')))
+}) |> 
+  bind_rows()
+
+
+
+
 # Summarize QGmvparams posteriors -----------------------------------------
 
 # summary of mean.obs for each block
@@ -428,9 +452,12 @@ ppc <- cbind(ppc, sapply(1:nrow(ppc), function(i) {
   x <- switch(
     m,
     Hatch = list(obs = model.data$hatch[id], ppd = p$hatch.ppd[id, ]),
-    'Settle|Hatch' = list(obs = model.data$settle_hatch[id], ppd = p$settle_hatch.ppd[id, ]),
+    'Settle|Hatch' = list(
+      obs = model.data$settle_hatch[id], 
+      ppd = p$settle_hatch.ppd[id, ]
+    ),
     list(
-      obs = model.data$length[id, m],
+      obs = model.data$length1[id, m],
       ppd = p$length.ppd[id, m, ]
     )
   )
@@ -449,7 +476,7 @@ ppc.smry <- smrzPPC(ppc)
 # Save all objects --------------------------------------------------------
 
 end <- Sys.time()
-save.image(format(end, 'Model_outputs/Model_II_posterior_%Y%m%d_%H%M.rdata'))
+save.image(format(end, 'Model_outputs/posterior_%Y%m%d_%H%M.rdata'))
 
 
 # Plot posterior distributions --------------------------------------------
@@ -457,13 +484,13 @@ save.image(format(end, 'Model_outputs/Model_II_posterior_%Y%m%d_%H%M.rdata'))
 plot(
   post,
   vars = c('deviance', 'sire.vcov', 'dam.vcov', 'int.vcov', 'resid.vcov'),
-  file = format(end, 'Model_outputs/Model_II_plots_%Y%m%d_%H%M.pdf')
+  file = format(end, 'Model_outputs/plots_%Y%m%d_%H%M.pdf')
 )
 
 
 # Plot diagnostics --------------------------------------------------------
 
-pdf(format(end, "Model_outputs/Model_III_diagnostics_%Y%m%d_%H%M.pdf"))
+pdf(format(end, "Model_outputs/diagnostics_%Y%m%d_%H%M.pdf"))
 
 ggplot(post.smry$post) +
   geom_histogram(aes(values), bins = 20) +
