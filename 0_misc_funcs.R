@@ -161,7 +161,8 @@ addQGmetrics <- function(p) {
 
 # summarize posterior sample and create diagnostics summary
 smrzPost <- function(post, v) {
-  post.smry <- runjags::summary(post, vars = v) |>  
+  library(runjags)
+  post.smry <- summary(post, vars = v) |>  
     as.data.frame() |> 
     rownames_to_column('metric') |>
     select(metric, SSeff:psrf) |> 
