@@ -9,8 +9,8 @@ start <- Sys.time()
 chains <- 6 #50
 adapt <- 100
 burnin <- 500 #500000
-total.sample <- 1000 #5000 
-thin <- 1 #5000
+total.sample <- 1000 #3000 
+thin <- 1 #7000
 
 
 # Load data ---------------------------------------------------------------
@@ -64,9 +64,9 @@ model.data <- list(
   tt.dam = trunk_tail.df$dam,
   tt.int = trunk_tail.df$interaction,
   block.mean.range = cbind(
-    round(range(trunk_tail.df$trunk)), 
-    round(range(trunk_tail.df$tail)),
-    qlogis(c(0.2, 0.95))
+    round(range(trunk_tail.df$trunk)) * c(0.6, 1.4), 
+    round(range(trunk_tail.df$tail)) * c(0.6, 1.4),
+    c(-10, 10) #qlogis(c(0.001, 0.999))
   ),
   length1 = cbind(Trunk = trunk_tail.df$trunk, Tail = trunk_tail.df$tail),
   length2 = cbind(Trunk = trunk_tail.df$trunk, Tail = trunk_tail.df$tail),
@@ -476,7 +476,7 @@ ppc.smry <- smrzPPC(ppc)
 # Save all objects --------------------------------------------------------
 
 end <- Sys.time()
-save.image(format(end, 'Model_outputs/posterior_%Y%m%d_%H%M.rdata'))
+save.image(format(end, 'Model_outputs/posterior_%Y%m%d_%H%M.rdata', tz = 'GMT'))
 
 
 # Plot posterior distributions --------------------------------------------
@@ -484,13 +484,13 @@ save.image(format(end, 'Model_outputs/posterior_%Y%m%d_%H%M.rdata'))
 plot(
   post,
   vars = c('deviance', 'sire.vcov', 'dam.vcov', 'int.vcov', 'resid.vcov'),
-  file = format(end, 'Model_outputs/plots_%Y%m%d_%H%M.pdf')
+  file = format(end, 'Model_outputs/plots_%Y%m%d_%H%M.pdf', tz = 'GMT')
 )
 
 
 # Plot diagnostics --------------------------------------------------------
 
-pdf(format(end, "Model_outputs/diagnostics_%Y%m%d_%H%M.pdf"))
+pdf(format(end, "Model_outputs/diagnostics_%Y%m%d_%H%M.pdf", tz = 'GMT'))
 
 ggplot(post.smry$post) +
   geom_histogram(aes(values), bins = 20) +
