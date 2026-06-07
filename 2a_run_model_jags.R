@@ -9,7 +9,7 @@ start <- Sys.time()
 chains <- 6 #50
 adapt <- 100
 burnin <- 500 #500000
-total.sample <- 1000 #3000 
+total.sample <- 1000 #5000 
 thin <- 1 #7000
 
 
