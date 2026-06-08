@@ -117,10 +117,10 @@ post <- run.jags(
       int.mean[t] ~ dnorm(0, 1e-5)
       
       # ---- variances ----
-      sire.vcov[t, t] ~ dunif(0, 1e3)
-      dam.vcov[t, t] ~ dunif(0, 1e3)
-      int.vcov[t, t] ~ dunif(0, 1e3)
-      resid.vcov[t, t] ~ dunif(0, 1e3)
+      sire.vcov[t, t] ~ dunif(0, 1e2)
+      dam.vcov[t, t] ~ dunif(0, 1e2)
+      int.vcov[t, t] ~ dunif(0, 1e2)
+      resid.vcov[t, t] ~ dunif(0, 1e2)
     }
     
     # ---- construct variance/covariance matrices ----

@@ -22,52 +22,58 @@ vecSmry <- function(x) {
   smry
 }
 
-comp.smry <- function(x, gt = 0) {
+
+cov.smry <- function(x, gt = 0) {
   library(tidyverse)
-  df <- if(is.null(dim(x))) {
-    as.data.frame(rbind(vecSmry(x)))
-  } else if(length(dim(x)) == 2) {
-    as.data.frame(t(apply(x, 1, vecSmry)))
-  } else {
-    metrics <- dimnames(x)[[1]]
-    t(sapply(c(lapply(metrics, rep, times = 2), list(metrics)), function(i) {
-      xi <- x[i[1], i[2], ]
-      result <- vecSmry(xi)
-      setNames(
-        c(result, mean(xi > gt)), 
-        c(names(result), paste0("pct.gt.", gt))
+  
+  metrics <- dimnames(x)[[1]]
+  
+  cov.df <-   data.frame(
+    metric1 = metrics,
+    metric2 = metrics
+  ) |> 
+    bind_rows(
+      metrics |> 
+        combn(2) |> 
+        t() |> 
+        as.data.frame() |> 
+        setNames(c('metric1', 'metric2'))
+    ) |> 
+    mutate(
+      label = ifelse(
+        metric1 == metric2, 
+        paste0('Var(', metric1, ')'),
+        paste0('Cov(', metric1, ', ', metric2, ')')
       )
-    })) |> 
-      as.data.frame() |> 
-      mutate(measure = c(metrics, "cov")) |> 
-      column_to_rownames("measure")
-  }
-  pander::pander(df, split.tables = Inf, keep.line.breaks = TRUE)
-}
-
-
-plot.metric <- function(x) {
-  library(tidyverse)
-  if(is.null(dim(x))) {
-    x |> 
-      enframe() |>
-      ggplot(aes(value)) +
-      geom_histogram(bins = 100) +
-      labs(x = "Value", y = "Count")
-  } else {
-    metrics <- dimnames(x)[[1]]
-    sapply(c(lapply(metrics, rep, times = 2), list(metrics)), function(i) {
-      x[i[1], i[2], ]
-    }) |> 
-      as.data.frame() |> 
-      setNames(c(metrics, "cov")) |> 
-      pivot_longer(everything()) |> 
-      mutate(name = factor(name, levels = c(metrics, "cov"))) |> 
+    ) 
+  
+  x.df <- lapply(1:nrow(cov.df), function(i) {
+    data.frame(
+      value = x[cov.df$metric1[i], cov.df$metric2[i], ],
+      metric = cov.df$label[i]
+    ) 
+  }) |> 
+    bind_rows() |>
+    mutate(metric = factor(metric, levels = cov.df$label))
+  
+  list(
+    smry = x.df |> 
+      group_by(metric) |>
+      summarise(
+        summary_values = list(vecSmry(value)), 
+        pct.gt = mean(value > gt, na.rm = TRUE),
+        .groups = 'drop'
+      ) |>
+      unnest_wider(summary_values, names_repair = "unique") |> 
+      ungroup() |> 
+      rename_with(.fn = function(col) paste0(col, '.', gt), .cols = pct.gt) |> 
+      as.data.frame(), 
+    plot = x.df |> 
       ggplot(aes(value)) +
       geom_histogram(bins = 100) +
       labs(x = "Value", y = "Count") +
-      facet_wrap(~ name, scales = "free")
-  }
+      facet_wrap(~ metric, scales = "free")
+  )
 }
 
 
@@ -97,9 +103,6 @@ plot_func <- function(df, bw, breaks, max_x, param_df, min_x = 0, title = NULL) 
     group_by(param) |>
     summarise(summary_values = list(vecSmry(value)), .groups = 'drop') |>
     unnest_wider(summary_values, names_repair = "unique")
-  
-  print(vc_colors)
-  print(smry)
   
   df |> 
     ggplot(aes(x = value, y = param, fill = param)) +

@@ -28,6 +28,7 @@ library(tidyverse)
 library(runjags)
 load("Model_outputs/posterior_20260605_0520.rdata")
 source("0_misc_funcs.R")
+elapsed <- swfscMisc::autoUnits(post$timetaken)
 ```
 
 ## Run Summary
@@ -45,10 +46,7 @@ End Time: `r format(end, "%Y-%m-%d %H:%M")`
 ```{r, include=FALSE}
 smry <- summary(
   post, 
-  vars = c(
-    "deviance", "sire.vcov", "dam.vcov", 
-    "interaction.vcov", "resid.vcov"
-  )
+  vars = c("deviance", "sire.vcov", "dam.vcov", "int.vcov", "resid.vcov")
 )
 ```
 ```{r}
@@ -60,180 +58,117 @@ smry |>
 
 ## V~A~
 ```{r}
-comp.smry(p$VA)
-plot.metric(p$VA)
+smry <- cov.smry(p$VA)
+ pander::pander(smry$smry, split.tables = Inf, keep.line.breaks = TRUE) 
+plot(smry$plot)
 ```
 
 ## V~M~
 ```{r}
-comp.smry(p$VM)
-plot.metric(p$VM)
+smry <- cov.smry(p$VM)
+pander::pander(smry$smry, split.tables = Inf, keep.line.breaks = TRUE) 
+plot(smry$plot)
 ```
 \newpage  
 
 ## V~D~
 ```{r}
-comp.smry(p$VD)
-plot.metric(p$VD)
+smry <- cov.smry(p$VD)
+ pander::pander(smry$smry, split.tables = Inf, keep.line.breaks = TRUE) 
+plot(smry$plot)
 ```
 
 ## V~R~
 ```{r}
-comp.smry(p$resid.vcov)
-plot.metric(p$resid.vcov)
+smry <- cov.smry(p$resid)
+ pander::pander(smry$smry, split.tables = Inf, keep.line.breaks = TRUE) 
+plot(smry$plot)
 ```
 
 ## V~P~
 ```{r}
-comp.smry(p$VP)
-plot.metric(p$VP)
+smry <- cov.smry(p$VP)
+ pander::pander(smry$smry, split.tables = Inf, keep.line.breaks = TRUE) 
+plot(smry$plot)
 ```
 \newpage  
 
 ## V~M~ / V~A~
 ```{r}
-vm.va <- p$VM / p$VA
-comp.smry(vm.va, 1)
-plot.metric(vm.va) + scale_x_log10()
+smry <- cov.smry(p$VM / p$VA, 1)
+ pander::pander(smry$smry, split.tables = Inf, keep.line.breaks = TRUE) 
+plot(smry$plot + scale_x_log10())
 ```
 
 ## V~D~ / V~A~
 ```{r}
-vd.va <- p$VD / p$VA
-comp.smry(vd.va, 1)
-plot.metric(vd.va) + scale_x_log10()
+smry <- cov.smry(p$VD / p$VA, 1)
+ pander::pander(smry$smry, split.tables = Inf, keep.line.breaks = TRUE) 
+plot(smry$plot + scale_x_log10())
 ```
 \newpage  
 
-
-## Selection differentials, s<sub>g</sub> = cov<sub>g</sub>(w, z)  
-- We have Cov(p, length) on the data scale, from QGmvparams() 
-- We want Cov(w, length) where w = p / mean(p) (relative fitness)  
-- Use linear scaling property of covariance, so that:  
-Cov(w, length) = Cov(p / mean(p), length) = 1 / mean(p) * Cov(p, length)  
-- So we just divide Cov(p, length) by the mean of p  
-
-Trunk selection differential  
-```{r}
-cov_trunk_p <- vcv.obs$vcv.G.obs[1,3,]
-mean_p <- vcv.obs$mean.obs[, "Settling"]
-cov_trunk_p_relative <- cov_trunk_p / mean_p # selection differential
-c(
-  vecSmry(cov_trunk_p_relative),
-  pr.gt.0 = mean(cov_trunk_p_relative > 0)
-)
-plot.metric(cov_trunk_p_relative)
-```
-
-Tail selection differential
-```{r}
-cov_tail_p <- vcv.obs$vcv.G.obs[2,3,]
-mean_p <- vcv.obs$mean.obs[, "Settling"]
-cov_tail_p_relative <- cov_tail_p / mean_p # selection differential
-c(
-  vecSmry(cov_tail_p_relative),
-  pr.gt.0 = mean(cov_tail_p_relative > 0)
-)
-plot.metric(cov_tail_p_relative)
-```
-
-## Selection gradients, &beta;<sub>g</sub> = G<sup>-1</sup>s<sub>g</sub>  
-```{r}
-sg <- rbind(cov_trunk_p_relative, cov_tail_p_relative)  # 2 x n_iter
-
-n_iter <- dim(G_matrix[,,])[3]
-
-beta <- matrix(NA, nrow = 2, ncol = n_iter,
-                     dimnames = list(c("Trunk", "Tail"), NULL))
-
-for (i in seq_len(n_iter)) {
-  G <- G_matrix[, , i]
-  S_vec <- sg[, i]
-  beta[, i] <- solve(G) %*% S_vec
-}
-
-beta |> 
-  apply(1, function(x) {
-    c(vecSmry(x), pr.gt.0 = mean(x > 0))
-  }) |> 
-  t() |> 
-  as.data.frame() |> 
-  pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
-plot.metric(beta[1,])
-plot.metric(beta[2,])
-```
-
-
-
-
 ## Heritability
 ```{r}
-comp.smry(p$H)
-plot.metric(p$H)
+smry <- cov.smry(p$H)
+ pander::pander(smry$smry, split.tables = Inf, keep.line.breaks = TRUE) 
+plot(smry$plot)
 ```
 \newpage  
 
 ## Evolvability (single traits)
 ```{r}
-comp.smry(p$E)
-
-p$E |> 
-  t() |> 
-  as.data.frame() |> 
-  pivot_longer(everything()) |> 
-  ggplot(aes(value)) +
-  geom_histogram(bins = 100) +
-  labs(x = "Value", y = "Count") +
-  facet_wrap(~ name, scales = "free")
+# smry <- cov.smry(p$E)
+#  pander::pander(smry$smry, split.tables = Inf, keep.line.breaks = TRUE) 
+# plot(smry$plot)
+# 
+# p$E |> 
+#   t() |> 
+#   as.data.frame() |> 
+#   pivot_longer(everything()) |> 
+#   ggplot(aes(value)) +
+#   geom_histogram(bins = 100) +
+#   labs(x = "Value", y = "Count") +
+#   facet_wrap(~ name, scales = "free")
 ```
 
 ## Tail / Trunk Evolvability
 ```{r}
-e.ratio <- p$E[2, ] / p$E[1, ]
-
-e.ratio |> 
-  log() |> 
-  vecSmry() |>
-  exp() |> 
-  rbind() |>
-  as.data.frame() |>
-  pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
-
-data.frame(ratio = e.ratio) |> 
-  ggplot(aes(ratio)) +
-  geom_histogram(bins = 100) +
-  scale_x_log10() +
-  labs(x = "Tail / Trunk Evolvability", y = "Count")
+# e.ratio <- p$E[2, ] / p$E[1, ]
+# 
+# e.ratio |> 
+#   log() |> 
+#   vecSmry() |>
+#   exp() |> 
+#   rbind() |>
+#   as.data.frame() |>
+#   pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
+# 
+# data.frame(ratio = e.ratio) |> 
+#   ggplot(aes(ratio)) +
+#   geom_histogram(bins = 100) +
+#   scale_x_log10() +
+#   labs(x = "Tail / Trunk Evolvability", y = "Count")
 ```
 
 ## Evolvability (from G matrix) v1  
 This is for a random set of selection gradients.
 ```{r}
 # Get the posterior samples by averaging across all of the random beta's
-eB_posterior_trunk_tail <- apply(e.params_BetaMCMC$post.dist$eB, 1, mean)
-rB_posterior_trunk_tail <- apply(e.params_BetaMCMC$post.dist$rB, 1, mean)
-cB_posterior_trunk_tail <- apply(e.params_BetaMCMC$post.dist$cB, 1, mean)
-aB_posterior_trunk_tail <- apply(e.params_BetaMCMC$post.dist$aB, 1, mean)
-iB_posterior_trunk_tail <- apply(e.params_BetaMCMC$post.dist$iB, 1, mean)
+e.names <- c('eB', 'rB', 'cB', 'iB', 'aB')
 
-E_trunk_tail <- 
-  data.frame(name = c(rep("eB",length(eB_posterior_trunk_tail)),
-                      rep("rB",length(rB_posterior_trunk_tail)),
-                      rep("cB",length(cB_posterior_trunk_tail)),
-                      rep("aB",length(aB_posterior_trunk_tail)),
-                      rep("iB",length(iB_posterior_trunk_tail))),
-             value = c(eB_posterior_trunk_tail,
-                       rB_posterior_trunk_tail,
-                       cB_posterior_trunk_tail,
-                       aB_posterior_trunk_tail,
-                       iB_posterior_trunk_tail))
-
-E_trunk_tail <- E_trunk_tail |> 
-  mutate(name = factor(name, levels = c("eB","rB","cB", "iB", "aB"))) |>
+lapply(e.names, function(x) {
+  data.frame(
+    value = apply(e.params_BetaMCMC$post.dist[[x]], 1, mean),
+    name = x
+  )
+}) |> 
+  bind_rows() |> 
+  mutate(name = factor(name, levels = e.names)) |>
   group_by(name) |>
-  summarise(summary = list(round(vecSmry(value), 6)), .groups = "drop") |> unnest_wider(summary)
-
-pander::pander(E_trunk_tail)
+  summarise(summary = list(round(vecSmry(value), 6)), .groups = "drop") |>
+  unnest_wider(summary) |> 
+  pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
 ```
 
 ## Evolvability (from G matrix) v2 
@@ -243,26 +178,23 @@ Beta_index = 2 is $\beta = \begin{bmatrix} -(1/\sqrt2) \\ -(1/\sqrt2) \end{bmatr
 Beta_index = 3 is $\beta = \begin{bmatrix} (1/\sqrt2) \\ -(1/\sqrt2) \end{bmatrix}$ = strong selection for longer trunks and shorter tails  
 
 ```{r}
-summary_stacked <- e.params_beta %>%
-  pivot_longer(cols = c(e, r, c, a , i), 
-               names_to = "metric", 
-               values_to = "value") %>%
-    mutate(metric = recode(metric,
-                         e = "evolvability",
-                         r = "respondability",
-                         c = "conditional",
-                         a = "autonomy (cB/eB)",
-                         i = "integration"),
-         metric = factor(metric, 
-                         levels = c("evolvability",
-                                    "respondability",
-                                    "conditional",
-                                    "autonomy (cB/eB)",
-                                    "integration"))) %>% 
-  group_by(Beta_index, metric) %>%
-  summarise(summary = list(round(vecSmry(value), 6)), .groups = "drop") %>%
-  unnest_wider(summary) %>%
-  arrange(metric, Beta_index)
+e.labels <- c(
+  e = 'evolvability', r = 'respondability', c = 'conditional',
+  a = 'autonomy (cB/eB)', i = 'integration'
+)
 
-pander::pander(summary_stacked)
+e.params_beta |>
+  pivot_longer(
+    cols = -c(sample, Beta_index), 
+    names_to = 'metric', 
+    values_to = 'value'
+  ) |> 
+  mutate(
+    metric = factor(e.labels[metric], levels = e.labels)
+  ) |>  
+  group_by(Beta_index, metric) |> 
+  summarise(summary = list(round(vecSmry(value), 6)), .groups = "drop") |> 
+  unnest_wider(summary) |> 
+  arrange(metric, Beta_index) |> 
+  pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
 ```
