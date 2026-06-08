@@ -442,7 +442,6 @@ sg <- lapply(1:nrow(sg.df), function(i) {
   bind_rows()
 
 
-
 # CODA summary ------------------------------------------------------------
 
 post.smry <- smrzPost(

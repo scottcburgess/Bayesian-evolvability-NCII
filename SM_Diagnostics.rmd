@@ -27,20 +27,23 @@ options(scipen = 9999)
 
 From the posterior of the model, we show histograms of the autocorrelation (AC.####), potential scale reduction factor (PSRF), and effective sample size (ESS) values for all parameters of interest in the model. Following these are the posterior predictive check distribution (PPD) expressed as the distribution of the deviation of the observed values from the PPD values. Finally, for the parameters of interest, we show the posterior trace, histogram, expected cumulative distribution (ECDF), and autocorrelation distribution.
 
-\newpage
-
 ```{r}
-load('Model_outputs/Model_I_posterior_20250930_0019.rdata')
+load('Model_outputs/posterior_20260605_0520.rdata')
 ```
-  
+
+### MCMC parameters  
+
 Number of chains: `r length(post$mcmc)`  
 Burnin: `r post$burnin`  
 Samples per chain: `r post$sample`  
 Total samples: `r post$sample * length(post$mcmc)`  
   
-### A) Posterior distribution diagnostics
+\newpage  
+
+### A) Posterior distribution diagnostic summary
 ```{r}
-ggplot(post.smry) +
+post.smry$post |> 
+  ggplot() +
   geom_histogram(aes(values), bins = 20) +
   facet_wrap(~diag, scales = 'free_x')
 ```
@@ -62,7 +65,7 @@ ggplot(ppc) +
 suppressMessages(plot(
   post, 
   vars = c(
-    'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 'resid.vcov'
+    'deviance', 'sire.vcov', 'dam.vcov', 'int.vcov', 'resid.vcov'
   )
 ))
 ```
