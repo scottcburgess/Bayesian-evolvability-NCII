@@ -2,17 +2,10 @@ rm(list = ls())
 library('tidyverse')
 library('ggridges')
 
-## Panel A ----
-
 # Trunk Tail: load and prepare ----
 load("Model_outputs/posterior_20260605_0120.rdata")
 
 source('0_misc_funcs.R')
-
-# quick check 
-# vecSmry(p$H[1,1,]) # is ~similar to
-# vecSmry(p$VA[1,1,] / p$VP[1,1,])
-# vecSmry(vcv.obs$VA$vcv.G.obs[1,1,] / vcv.obs$VA$vcv.P.obs[1,1,])
 
 d_Trunktail <- lapply(vcov_params, function(param) {
   data.frame(
@@ -30,7 +23,7 @@ panelA <- d_Trunktail |>
     title = 'a) Trunk length', 
     bw = 0.01, 
     breaks = seq(0, 1, 0.1), 
-    max_x = 0.8
+    max_x = 1
   )
 
 panelB <- d_Trunktail |> 
@@ -39,7 +32,7 @@ panelB <- d_Trunktail |>
     title = 'b) Tail length', 
     bw = 0.01, 
     breaks = seq(0, 1, 0.1), 
-    max_x = 0.8
+    max_x = 1
   )
 
 
@@ -58,7 +51,7 @@ ggsave(
   "Figures and Tables/Figure 3.pdf", 
   plot = fig3, 
   height = 4, 
-  width = 8
+  width = 3
 )
 
 

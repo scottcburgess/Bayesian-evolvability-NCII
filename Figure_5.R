@@ -86,6 +86,6 @@ fig5
 ggsave(
   "Figures and Tables/Figure 5.pdf", 
   plot = fig5, 
-  height = 8 / 3, 
+  height = 3, 
   width = 8
 )

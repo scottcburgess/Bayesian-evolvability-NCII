@@ -18,18 +18,14 @@ E_trunk_tail <- lapply(betas, function(b) {
   bind_rows() |> 
   mutate(param = factor(param, levels = unique(param))) 
 
-# Check
-# e.params_BetaMCMC$summary # median (called e_mean) should be the same as
-# vecSmry(eB_posterior_trunk_tail) # median here (but we're using the mode)
-
 fig4 <- E_trunk_tail |> 
   rename(value = 'beta') |> 
   plot_func(
     bw = 0.0015, 
     breaks = seq(0, 0.1, 0.01), 
-    max_x = 0.08
+    max_x = 0.1
   ) +
-  labs(x = 'Evolvability (%)', y = 'Trunk-Tail length') +
+  labs(x = 'Evolvability (%)', y = 'Metric') +
   theme(
     axis.title.x = element_text(size = 12, hjust = 0.5),
     axis.title.y = element_text(size = 12, hjust = 0.5),
@@ -42,7 +38,7 @@ ggsave(
   "Figures and Tables/Figure 4.pdf", 
   plot = fig4, 
   height = 3, 
-  width = 6
+  width = 3
 )
 
 

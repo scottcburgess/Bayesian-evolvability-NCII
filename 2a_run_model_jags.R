@@ -323,21 +323,22 @@ dimnames(vp.obs)[1:2] <- list(names.4, names.4)
 
 
 sg.df <- expand.grid(
-  x = c('Trunk', 'Tail'), 
+  z = c('Trunk', 'Tail'), 
   W = c('Hatch', 'Settle|Hatch'),
   stringsAsFactors = FALSE
 )
 sg <- lapply(1:nrow(sg.df), function(i) {
   sg.i <- sapply(1:dim(block.mean.obs)[2], function(b) {
-    # delta z = cov(x,W)/mean(W) = R = sg
-    va.obs[sg.df$x[i], sg.df$W[i], b, ] / block.mean.obs[sg.df$W[i], b, ]
+    # delta z = cov(z,W)/mean(W) = R = sg (in units of microns)
+    va.obs[sg.df$z[i], sg.df$W[i], b, ] / block.mean.obs[sg.df$W[i], b, ]
   }) |> 
-    t() |> 
+  # ERIC TO ADD: sg_percent = (sg for trunk in block b / mean of trunk in block b) * 100 (in units of % change)
+        t() |> 
     as.data.frame() |> 
     mutate(block = blocks) |> 
     pivot_longer(-block, names_to = 'sample', values_to = 'sg') |> 
     mutate(
-      x = sg.df$x[i],
+      z = sg.df$z[i],
       W = sg.df$W[i],
       sample = as.numeric(stringr::str_remove(sample, 'V')))
 }) |> 
