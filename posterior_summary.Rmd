@@ -38,6 +38,7 @@ Samples per chain : `r post$sample`
 Total samples : `r post$sample * length(post$mcmc)`  
 Thinning : `r post$thin`   
 Duration: `r paste(round(elapsed, 1), units(elapsed))`  
+Start Time: `r format(start, "%Y-%m-%d %H:%M")`  
 End Time: `r format(end, "%Y-%m-%d %H:%M")`   
 
 ## Posterior Summary
