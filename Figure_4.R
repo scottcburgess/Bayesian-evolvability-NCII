@@ -4,7 +4,7 @@ library('tidyverse')
 library('ggridges')
 
 # trunk Tail: load and prepare ----
-load("Model_outputs/posterior_20260605_0120.rdata") 
+load("Model_outputs/posterior_20260605_0520.rdata") 
 
 source('0_misc_funcs.R')
 
@@ -23,7 +23,8 @@ fig4 <- E_trunk_tail |>
   plot_func(
     bw = 0.0015, 
     breaks = seq(0, 0.1, 0.01), 
-    max_x = 0.1
+    max_x = 0.1,,
+    param_df = param_df
   ) +
   labs(x = 'Evolvability (%)', y = 'Metric') +
   theme(

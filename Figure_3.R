@@ -3,7 +3,7 @@ library('tidyverse')
 library('ggridges')
 
 # Trunk Tail: load and prepare ----
-load("Model_outputs/posterior_20260605_0120.rdata")
+load("Model_outputs/posterior_20260605_0520.rdata")
 
 source('0_misc_funcs.R')
 
@@ -23,7 +23,8 @@ panelA <- d_Trunktail |>
     title = 'a) Trunk length', 
     bw = 0.01, 
     breaks = seq(0, 1, 0.1), 
-    max_x = 1
+    max_x = 1,
+    param_df = param_df
   )
 
 panelB <- d_Trunktail |> 
@@ -32,7 +33,8 @@ panelB <- d_Trunktail |>
     title = 'b) Tail length', 
     bw = 0.01, 
     breaks = seq(0, 1, 0.1), 
-    max_x = 1
+    max_x = 1,
+    param_df = param_df
   )
 
 

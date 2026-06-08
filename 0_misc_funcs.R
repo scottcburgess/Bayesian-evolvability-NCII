@@ -71,7 +71,6 @@ plot.metric <- function(x) {
 }
 
 
-
 param_df <- data.frame(
   param = c('VA', 'VM', 'VD', 'VR', 'VP', 'eB', 'cB', 'rB'),
   param_label = c('V[A]', 'V[M]', 'V[D]', 'V[R]', 'V[P]', 'e(beta)', 'c(beta)', 'r(beta)'),
@@ -89,24 +88,18 @@ vcov_params <- c('VA', 'VM', 'VD', 'VR')
 
 betas <- c('eB', 'cB', 'rB')
 
-vc_colors <- param_df |> 
-  select(param, color) |> 
-  deframe()
-
-default_theme <- ggridges::theme_ridges() +
-  theme(
-    legend.position = "none",
-    axis.title = element_blank(),
-    axis.text.x = element_text(size = 6),
-    axis.text.y = element_text(size = 8),
-    plot.title = element_text(size = 10, face = "plain")
-  )
-
-plot_func <- function(df, bw, breaks, max_x, title = NULL) {
+plot_func <- function(df, bw, breaks, max_x, param_df, min_x = 0, title = NULL) {
+  vc_colors <- param_df |> 
+    select(param, color) |> 
+    deframe()
+  
   smry <- df |>
     group_by(param) |>
     summarise(summary_values = list(vecSmry(value)), .groups = 'drop') |>
     unnest_wider(summary_values, names_repair = "unique")
+  
+  print(vc_colors)
+  print(smry)
   
   df |> 
     ggplot(aes(x = value, y = param, fill = param)) +
@@ -137,14 +130,21 @@ plot_func <- function(df, bw, breaks, max_x, title = NULL) {
     labs(title = title) +
     scale_fill_manual(values = vc_colors) +
     scale_color_manual(values = vc_colors) +
-    scale_x_continuous(breaks = breaks, limits = c(0, max_x)) +
+    scale_x_continuous(breaks = breaks, limits = c(min_x, max_x)) +
     scale_y_discrete(
       labels = param_df |> 
         select(param, param_label) |> 
         deframe() |> 
         sapply(function(x) parse(text = x))
     ) + 
-    default_theme
+    ggridges::theme_ridges() +
+    theme(
+      legend.position = "none",
+      axis.title = element_blank(),
+      axis.text.x = element_text(size = 6),
+      axis.text.y = element_text(size = 8),
+      plot.title = element_text(size = 10, face = "plain")
+    )
 }
 
 addQGmetrics <- function(p) {

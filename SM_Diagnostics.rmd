@@ -25,11 +25,9 @@ library(runjags)
 options(scipen = 9999)
 ```
 
-For each model, we show histograms of the autocorrelation (AC.####), potential scale reduction factor (PSRF), and effective sample size (ESS) values for all parameters of interest in the model. Following these are the posterior predictive check distribution (PPD) expressed as the distribution of the deviation of the observed values from the PPD values. Finally, for the parameters of interest for each model, we show the posterior trace, histogram, expected cumulative distribution (ECDF), and autocorrelation distribution.
+From the posterior of the model, we show histograms of the autocorrelation (AC.####), potential scale reduction factor (PSRF), and effective sample size (ESS) values for all parameters of interest in the model. Following these are the posterior predictive check distribution (PPD) expressed as the distribution of the deviation of the observed values from the PPD values. Finally, for the parameters of interest, we show the posterior trace, histogram, expected cumulative distribution (ECDF), and autocorrelation distribution.
 
 \newpage
-
-# Model I
 
 ```{r}
 load('Model_outputs/Model_I_posterior_20250930_0019.rdata')
@@ -65,92 +63,6 @@ suppressMessages(plot(
   post, 
   vars = c(
     'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 'resid.vcov'
-  )
-))
-```
-
-
-\newpage
-# Model II
-
-```{r}
-load('Model_outputs/Model_II_posterior_20250930_1554.rdata')
-```
-  
-Number of chains: `r length(post$mcmc)`  
-Burnin: `r post$burnin`  
-Samples per chain: `r post$sample`  
-Total samples: `r post$sample * length(post$mcmc)`  
-  
-### A) Posterior distribution diagnostics
-```{r}
-ggplot(post.smry) +
-  geom_histogram(aes(values), bins = 20) +
-  facet_wrap(~diag, scales = 'free_x') 
-```
-
-### B) Posterior predictive check distribution
-```{r}
-ggplot(ppc) +
-  geom_histogram(aes(mean.diff), bins = 50) +
-  labs(
-    x = 'Pr(Settling) Difference (Observed - PPD)', 
-    y = 'Count'
-  )
-```
-
-\newpage
-### C) By-parameter posterior summaries
-```{r}
-suppressMessages(plot(
-  post, 
-  vars = c(
-    'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov',
-    'pr.overall'
-  )
-))
-```
-
-
-\newpage
-# Model III
-
-```{r}
-load('Model_outputs/Model_III_posterior_20251001_0640.rdata')
-```
-  
-Number of chains: `r length(post$mcmc)`  
-Burnin: `r post$burnin`  
-Samples per chain: `r post$sample`  
-Total samples: `r post$sample * length(post$mcmc)`  
-  
-### A) Posterior distribution diagnostics
-```{r}
-ggplot(post.smry) +
-  geom_histogram(aes(values), bins = 20) +
-  facet_wrap(~diag, scales = 'free_x')
-```
-
-### B) Posterior predictive check distribution
-```{r}
-ggplot(ppc) +
-  geom_histogram(aes(mean.diff), bins = 50) +
-  facet_wrap(~ metric, scales = 'free') +
-  labs(
-    x = 'Metric Difference (Observed - PPD)', 
-    y = 'Count',
-    title = ''
-  )
-```
-
-\newpage
-### C) By-parameter posterior summaries
-```{r}
-suppressMessages(plot(
-  post, 
-  vars = c(
-    'deviance', 'sire.vcov', 'dam.vcov', 'interaction.vcov', 
-    'resid.vcov'
   )
 ))
 ```

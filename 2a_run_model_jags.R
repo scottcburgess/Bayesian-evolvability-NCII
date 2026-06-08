@@ -322,31 +322,6 @@ vp.obs <- do.call(
 dimnames(vp.obs)[1:2] <- list(names.4, names.4)
 
 
-sg.df <- expand.grid(
-  z = c('Trunk', 'Tail'), 
-  W = c('Hatch', 'Settle|Hatch'),
-  stringsAsFactors = FALSE
-)
-sg <- lapply(1:nrow(sg.df), function(i) {
-  sg.i <- sapply(1:dim(block.mean.obs)[2], function(b) {
-    # delta z = cov(z,W)/mean(W) = R = sg (in units of microns)
-    va.obs[sg.df$z[i], sg.df$W[i], b, ] / block.mean.obs[sg.df$W[i], b, ]
-  }) |> 
-  # ERIC TO ADD: sg_percent = (sg for trunk in block b / mean of trunk in block b) * 100 (in units of % change)
-        t() |> 
-    as.data.frame() |> 
-    mutate(block = blocks) |> 
-    pivot_longer(-block, names_to = 'sample', values_to = 'sg') |> 
-    mutate(
-      z = sg.df$z[i],
-      W = sg.df$W[i],
-      sample = as.numeric(stringr::str_remove(sample, 'V')))
-}) |> 
-  bind_rows()
-
-
-
-
 # Summarize QGmvparams posteriors -----------------------------------------
 
 # summary of mean.obs for each block
@@ -428,6 +403,46 @@ e.params_beta <- do.call(
 rownames(e.params_beta) <- NULL
 
 
+# Compute sg --------------------------------------------------------------
+
+sg.df <- expand.grid(
+  z = c('Trunk', 'Tail'), 
+  W = c('Hatch', 'Settle|Hatch'),
+  stringsAsFactors = FALSE
+) |> 
+  mutate(z.W = paste0(z, ' : ', W))
+
+sg <- lapply(1:nrow(sg.df), function(i) {
+  sg.i <- sapply(1:dim(block.mean.obs)[2], function(b) {
+    # delta z = cov(z,W)/mean(W) = R = sg (in units of microns)
+    va.obs[sg.df$z[i], sg.df$W[i], b, ] / block.mean.obs[sg.df$W[i], b, ]
+  }) |> 
+    t() 
+  
+  sg.i |> 
+    as.data.frame() |> 
+    setNames(1:ncol(sg.i)) |> 
+    mutate(block = blocks) |> 
+    pivot_longer(-block, names_to = 'sample', values_to = 'sg') |> 
+    mutate(
+      z = sg.df$z[i],
+      W = sg.df$W[i],
+      z.W = sg.df$z.W[i]
+    ) |>
+    left_join(
+      p$block.mean[, sg.df$z[i], ] |> 
+        as.data.frame() |> 
+        setNames(1:dim(p$block.mean)[3]) |> 
+        mutate(block = blocks) |> 
+        pivot_longer(-block, names_to = 'sample', values_to = 'block.mean'),
+      by = c('block', 'sample')
+    ) |> 
+    mutate(sg.pct = 100 * sg / block.mean)
+}) |> 
+  bind_rows()
+
+
+
 # CODA summary ------------------------------------------------------------
 
 post.smry <- smrzPost(
@@ -476,7 +491,7 @@ ppc.smry <- smrzPPC(ppc)
 
 # Save all objects --------------------------------------------------------
 
-end <- Sys.time()
+end <- if(exists('end')) end else Sys.time()
 save.image(format(end, 'Model_outputs/posterior_%Y%m%d_%H%M.rdata', tz = 'GMT'))
 
 

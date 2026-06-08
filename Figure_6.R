@@ -2,35 +2,31 @@ rm(list=ls())
 library('tidyverse')
 library('ggridges')
 
-load("Model_outputs/posterior_20260604_2220.rdata") 
+load("Model_outputs/posterior_20260605_0520.rdata") 
 source('0_misc_funcs.R')
 
-# sg |> 
-#   filter(!is.na(sg)) |> 
-#   mutate(
-#     z.W = paste0(z, ':', W),
-#     block = factor(block)
-#   ) |> 
-#   ggplot() +
-#   ggridges::geom_density_ridges(aes(x = sg, y = block)) +
-#   xlim(c(-2, 3)) +
-#   facet_wrap(~z.W, ncol = 2, scales = 'free_y')
-
 fig6 <- sg |> 
-  filter(!is.na(sg)) |> 
-  mutate(z.W = paste0(z, ':', W)) |> 
-  ggplot() +
-  geom_density(
-    aes(x = sg),
-    alpha = 0.4,
-    fill = 'gray30'
+  filter(!is.na(sg.pct)) |> 
+  rename(value = 'sg.pct', param = z.W) |> 
+  mutate(param = factor(param, levels = rev(sg.df$z.W))) |> 
+  select(value, param) |> 
+  plot_func(
+    bw = 0.04, 
+    breaks = seq(-1, 1, 0.25), 
+    min_x = -1,
+    max_x = 1,
+    param_df = data.frame(
+      param = sg.df$z.W,
+      color = c('#a6dba0', '#1b7837', '#c2a5cf', '#762a83'),
+      param_label = sapply(sg.df$z.W, function(x) paste0('`', x, '`'))
+    )
   ) +
-  # Plot 'sg_percent', not sg
-  # Add median and 95% hdpi
-  # Add x = 'Evolvability (%), y = 'Density'
-  xlim(c(-4, 4)) +
-  facet_wrap(~z.W, ncol = 2, scales = 'free_y') +
-  default_theme
+  labs(x = 'Evolvability (%)', y = 'Density') +
+  theme(
+    axis.title.x = element_text(size = 12, hjust = 0.5),
+    axis.title.y = element_text(size = 12, hjust = 0.5),
+    axis.text.x = element_text(angle = 45, hjust = 1)
+  )
 fig6
 
 ggsave(

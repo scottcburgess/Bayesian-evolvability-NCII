@@ -104,6 +104,67 @@ plot.metric(vd.va) + scale_x_log10()
 ```
 \newpage  
 
+
+## Selection differentials, s<sub>g</sub> = cov<sub>g</sub>(w, z)  
+- We have Cov(p, length) on the data scale, from QGmvparams() 
+- We want Cov(w, length) where w = p / mean(p) (relative fitness)  
+- Use linear scaling property of covariance, so that:  
+Cov(w, length) = Cov(p / mean(p), length) = 1 / mean(p) * Cov(p, length)  
+- So we just divide Cov(p, length) by the mean of p  
+
+Trunk selection differential  
+```{r}
+cov_trunk_p <- vcv.obs$vcv.G.obs[1,3,]
+mean_p <- vcv.obs$mean.obs[, "Settling"]
+cov_trunk_p_relative <- cov_trunk_p / mean_p # selection differential
+c(
+  vecSmry(cov_trunk_p_relative),
+  pr.gt.0 = mean(cov_trunk_p_relative > 0)
+)
+plot.metric(cov_trunk_p_relative)
+```
+
+Tail selection differential
+```{r}
+cov_tail_p <- vcv.obs$vcv.G.obs[2,3,]
+mean_p <- vcv.obs$mean.obs[, "Settling"]
+cov_tail_p_relative <- cov_tail_p / mean_p # selection differential
+c(
+  vecSmry(cov_tail_p_relative),
+  pr.gt.0 = mean(cov_tail_p_relative > 0)
+)
+plot.metric(cov_tail_p_relative)
+```
+
+## Selection gradients, &beta;<sub>g</sub> = G<sup>-1</sup>s<sub>g</sub>  
+```{r}
+sg <- rbind(cov_trunk_p_relative, cov_tail_p_relative)  # 2 x n_iter
+
+n_iter <- dim(G_matrix[,,])[3]
+
+beta <- matrix(NA, nrow = 2, ncol = n_iter,
+                     dimnames = list(c("Trunk", "Tail"), NULL))
+
+for (i in seq_len(n_iter)) {
+  G <- G_matrix[, , i]
+  S_vec <- sg[, i]
+  beta[, i] <- solve(G) %*% S_vec
+}
+
+beta |> 
+  apply(1, function(x) {
+    c(vecSmry(x), pr.gt.0 = mean(x > 0))
+  }) |> 
+  t() |> 
+  as.data.frame() |> 
+  pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
+plot.metric(beta[1,])
+plot.metric(beta[2,])
+```
+
+
+
+
 ## Heritability
 ```{r}
 comp.smry(p$H)

@@ -4,7 +4,7 @@ library('tidyverse')
 library('ggridges')
 
 # trunk Tail: load and prepare ----
-load("Model_outputs/posterior_20260605_0120.rdata") 
+load("Model_outputs/posterior_20260605_0520.rdata") 
 source('0_misc_funcs.R')
 
 ## Panel A ----
@@ -25,7 +25,8 @@ panelA <- e.params_beta |>
     title = 'a) Selection for longer tails', 
     bw = 0.005, 
     breaks = seq(0, 1, 0.05), 
-    max_x = 0.25
+    max_x = 0.25,
+    param_df = param_df
   ) +
   theme(plot.title = element_text(size = 9))
 
@@ -48,7 +49,8 @@ panelB <- e.params_beta |>
     title = 'b) Selection for short trunks, short tails', 
     bw = 0.04,
     breaks = seq(0, 1, 0.05), 
-    max_x = 0.25
+    max_x = 0.25,
+    param_df = param_df
   ) +
   theme(plot.title = element_text(size = 9))
 
@@ -71,7 +73,8 @@ panelC <- e.params_beta |>
     title = 'c) Selection for long trunks, short tails', 
     bw = 0.04,
     breaks = seq(0, 1, 0.05), 
-    max_x = 0.25
+    max_x = 0.25,
+    param_df = param_df
   ) +
   theme(plot.title = element_text(size = 9))
 
