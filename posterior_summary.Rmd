@@ -81,7 +81,8 @@ smry <- cov.smry(p$VD)
 plot(smry$plot)
 ```
 
-## V~R~ (latent scale)
+## V~R~  
+Latent scale  
 ```{r}
 smry <- cov.smry(p$resid)
  pander::pander(smry$smry, split.tables = Inf, keep.line.breaks = TRUE) 
