@@ -1,5 +1,5 @@
 ---
-title: Summary of Model I (Trunk, Tail)
+title: Summary of JAGS model
 output:
   html_document:
     toc: yes
@@ -26,7 +26,7 @@ options(scipen = 10, digits = 3)
 rm(list = ls())
 library(tidyverse)
 library(runjags)
-load("Model_outputs/posterior_20260605_0520.rdata")
+load("Model_outputs/Model_II_posterior_20260605_0120.rdata")
 source("0_misc_funcs.R")
 elapsed <- swfscMisc::autoUnits(post$timetaken)
 ```
@@ -56,14 +56,16 @@ smry |>
 ```
 \newpage  
 
-## V~A~
+## V~A~   
+Latent scale  
 ```{r}
 smry <- cov.smry(p$VA)
  pander::pander(smry$smry, split.tables = Inf, keep.line.breaks = TRUE) 
 plot(smry$plot)
 ```
 
-## V~M~
+## V~M~  
+Latent scale  
 ```{r}
 smry <- cov.smry(p$VM)
 pander::pander(smry$smry, split.tables = Inf, keep.line.breaks = TRUE) 
@@ -71,21 +73,23 @@ plot(smry$plot)
 ```
 \newpage  
 
-## V~D~
+## V~D~  
+Latent scale  
 ```{r}
 smry <- cov.smry(p$VD)
  pander::pander(smry$smry, split.tables = Inf, keep.line.breaks = TRUE) 
 plot(smry$plot)
 ```
 
-## V~R~
+## V~R~ (latent scale)
 ```{r}
 smry <- cov.smry(p$resid)
  pander::pander(smry$smry, split.tables = Inf, keep.line.breaks = TRUE) 
 plot(smry$plot)
 ```
 
-## V~P~
+## V~P~  
+Latent scale  
 ```{r}
 smry <- cov.smry(p$VP)
  pander::pander(smry$smry, split.tables = Inf, keep.line.breaks = TRUE) 
@@ -93,14 +97,16 @@ plot(smry$plot)
 ```
 \newpage  
 
-## V~M~ / V~A~
+## V~M~ / V~A~  
+Latent scale  
 ```{r}
 smry <- cov.smry(p$VM / p$VA, 1)
  pander::pander(smry$smry, split.tables = Inf, keep.line.breaks = TRUE) 
 plot(smry$plot + scale_x_log10())
 ```
 
-## V~D~ / V~A~
+## V~D~ / V~A~   
+Latent scale
 ```{r}
 smry <- cov.smry(p$VD / p$VA, 1)
  pander::pander(smry$smry, split.tables = Inf, keep.line.breaks = TRUE) 
@@ -108,51 +114,71 @@ plot(smry$plot + scale_x_log10())
 ```
 \newpage  
 
-## Heritability
+## Heritability 
 ```{r}
-smry <- cov.smry(p$H)
- pander::pander(smry$smry, split.tables = Inf, keep.line.breaks = TRUE) 
-plot(smry$plot)
+smry <- apply(p$H,1,vecSmry)
+ pander::pander(smry, split.tables = Inf, keep.line.breaks = TRUE) 
+
+ p$H |>
+  t() |>
+  as.data.frame() |>
+  pivot_longer(everything()) |>
+  ggplot(aes(value)) +
+  geom_histogram(bins = 100) +
+  labs(x = "Value", y = "Count") +
+  facet_wrap(~ name, scales = "free")
 ```
 \newpage  
 
-## Evolvability (single traits)
+## Evolvability (for single traits)
 ```{r}
-# smry <- cov.smry(p$E)
-#  pander::pander(smry$smry, split.tables = Inf, keep.line.breaks = TRUE) 
-# plot(smry$plot)
-# 
-# p$E |> 
-#   t() |> 
-#   as.data.frame() |> 
-#   pivot_longer(everything()) |> 
-#   ggplot(aes(value)) +
-#   geom_histogram(bins = 100) +
-#   labs(x = "Value", y = "Count") +
-#   facet_wrap(~ name, scales = "free")
+smry <- apply(p$E,1,vecSmry)
+ pander::pander(smry, split.tables = Inf, keep.line.breaks = TRUE)
+p$E |>
+  t() |>
+  as.data.frame() |>
+  pivot_longer(everything()) |>
+  ggplot(aes(value)) +
+  geom_histogram(bins = 100) +
+  labs(x = "Evolvability", y = "Count") +
+  facet_wrap(~ name, scales = "free")
+```
+Evolvability as a percentage
+```{r}
+smry <- apply(p$E * 100,1,vecSmry)
+ pander::pander(smry, split.tables = Inf, keep.line.breaks = TRUE)
+p$E |>
+  t() |>
+  as.data.frame() |>
+  pivot_longer(everything()) |>
+  ggplot(aes(value * 100)) +
+  geom_histogram(bins = 100) +
+  labs(x = "Evolvability (%)", y = "Count") +
+  facet_wrap(~ name, scales = "free")
 ```
 
 ## Tail / Trunk Evolvability
 ```{r}
-# e.ratio <- p$E[2, ] / p$E[1, ]
-# 
-# e.ratio |> 
-#   log() |> 
-#   vecSmry() |>
-#   exp() |> 
-#   rbind() |>
-#   as.data.frame() |>
-#   pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
-# 
-# data.frame(ratio = e.ratio) |> 
-#   ggplot(aes(ratio)) +
-#   geom_histogram(bins = 100) +
-#   scale_x_log10() +
-#   labs(x = "Tail / Trunk Evolvability", y = "Count")
+e.ratio <- p$E[2, ] / p$E[1, ]
+
+e.ratio |>
+  log() |>
+  vecSmry() |>
+  exp() |>
+  rbind() |>
+  as.data.frame() |>
+  pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
+
+data.frame(ratio = e.ratio) |>
+  ggplot(aes(ratio)) +
+  geom_histogram(bins = 100) +
+  scale_x_log10() +
+  labs(x = "Tail / Trunk Evolvability", y = "Count")
 ```
 
 ## Evolvability (from G matrix) v1  
-This is for a random set of selection gradients.
+This is for a random set of selection gradients.  
+Multiply eB by 100 to get in units of percent.  
 ```{r}
 # Get the posterior samples by averaging across all of the random beta's
 e.names <- c('eB', 'rB', 'cB', 'iB', 'aB')
@@ -176,7 +202,7 @@ This is for a specific set of selection gradients:
 Beta_index = 1 is $\beta = \begin{bmatrix} 0 \\ 1 \end{bmatrix}$ = strong selection for longer tails only  
 Beta_index = 2 is $\beta = \begin{bmatrix} -(1/\sqrt2) \\ -(1/\sqrt2) \end{bmatrix}$ = strong selection for shorter trunks and shorter tails  
 Beta_index = 3 is $\beta = \begin{bmatrix} (1/\sqrt2) \\ -(1/\sqrt2) \end{bmatrix}$ = strong selection for longer trunks and shorter tails  
-
+Multiply 'evolvability' by 100 to get in units of percent.  
 ```{r}
 e.labels <- c(
   e = 'evolvability', r = 'respondability', c = 'conditional',

@@ -342,7 +342,7 @@ vp.obs.smry <- va.obs |>
 
 # Evolvability ------------------------------------------------------------
 
-# Calculate average evolvability parameters of the G-matrix
+# Calculate average evolvability parameters of the trunk-tail G-matrix
 e.params_means <- do.call(
   rbind,
   parallel::mclapply(1:dim(p$VA)[3], function(i) {
@@ -354,7 +354,7 @@ e.params_means <- do.call(
 )
 
 # Calculate posterior distribution of evolvability parameters 
-# from a random set of selection gradients  
+# from a random set of selection gradients for trunk-tail G-matrix    
 e.params_BetaMCMC <- evolvability::evolvabilityBetaMCMC(
   G_mcmc = evolvability::meanStdGMCMC(
     t(apply(p$VA[names.2, names.2, ], 3, as.vector)),
@@ -365,7 +365,7 @@ e.params_BetaMCMC <- evolvability::evolvabilityBetaMCMC(
 )
 
 # Calculate evolvability parameters 
-# along a specific set of selection gradients
+# along a specific set of selection gradients for trunk-tail G-matrix
 B <- matrix(
   c(
     c(0, 1), # strong selection for long tails only, 
@@ -403,7 +403,7 @@ e.params_beta <- do.call(
 rownames(e.params_beta) <- NULL
 
 
-# Compute sg --------------------------------------------------------------
+# Compute the selection differentials from the covariance -----------------------
 
 sg.df <- expand.grid(
   z = c('Trunk', 'Tail'), 
@@ -437,6 +437,7 @@ sg <- lapply(1:nrow(sg.df), function(i) {
         pivot_longer(-block, names_to = 'sample', values_to = 'block.mean'),
       by = c('block', 'sample')
     ) |> 
+    # delta z / mean(z) = sg / mean(z) (in units of percent)
     mutate(sg.pct = 100 * sg / block.mean)
 }) |> 
   bind_rows()
