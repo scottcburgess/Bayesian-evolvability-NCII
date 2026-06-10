@@ -64,8 +64,8 @@ model.data <- list(
   tt.dam = trunk_tail.df$dam,
   tt.int = trunk_tail.df$interaction,
   block.mean.range = cbind(
-    round(range(trunk_tail.df$trunk)) * c(0.6, 1.4), 
-    round(range(trunk_tail.df$tail)) * c(0.6, 1.4),
+    round(range(trunk_tail.df$trunk)) * c(0.5, 1.5), 
+    round(range(trunk_tail.df$tail)) * c(0.5, 1.5),
     c(-10, 10) #qlogis(c(0.001, 0.999))
   ),
   length1 = cbind(Trunk = trunk_tail.df$trunk, Tail = trunk_tail.df$tail),
@@ -117,10 +117,10 @@ post <- run.jags(
       int.mean[t] ~ dnorm(0, 1e-5)
       
       # ---- variances ----
-      sire.vcov[t, t] ~ dunif(0, 1e2)
-      dam.vcov[t, t] ~ dunif(0, 1e2)
-      int.vcov[t, t] ~ dunif(0, 1e2)
-      resid.vcov[t, t] ~ dunif(0, 1e2)
+      sire.vcov[t, t] ~ dunif(0, 1e3)
+      dam.vcov[t, t] ~ dunif(0, 1e3)
+      int.vcov[t, t] ~ dunif(0, 1e3)
+      resid.vcov[t, t] ~ dunif(0, 1e3)
     }
     
     # ---- construct variance/covariance matrices ----
