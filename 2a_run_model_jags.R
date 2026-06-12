@@ -3,7 +3,7 @@ library(tidyverse)
 library(runjags)
 source('0_misc_funcs.R')
 
-start <- Sys.time()
+start.time <- Sys.time()
 
 # ---- MCMC parameters
 chains <- 6 #50
@@ -230,6 +230,12 @@ post <- run.jags(
 )
 
 
+# Save all objects --------------------------------------------------------
+
+end.time <- if(exists('end.time')) end.time else Sys.time()
+save.image(format(end.time, 'Model_outputs/posterior_%Y%m%d_%H%M.rdata', tz = 'GMT'))
+
+
 # Extract posterior to named list of arrays: p -----------------------------
 
 p <- swfscMisc::runjags2list(post)
@@ -320,6 +326,12 @@ vp.obs <- do.call(
   )
 )
 dimnames(vp.obs)[1:2] <- list(names.4, names.4)
+
+
+# Save all objects --------------------------------------------------------
+
+end.time <- if(exists('end.time')) end.time else Sys.time()
+save.image(format(end.time, 'Model_outputs/posterior_%Y%m%d_%H%M.rdata', tz = 'GMT'))
 
 
 # Summarize QGmvparams posteriors -----------------------------------------
@@ -491,8 +503,8 @@ ppc.smry <- smrzPPC(ppc)
 
 # Save all objects --------------------------------------------------------
 
-end <- if(exists('end')) end else Sys.time()
-save.image(format(end, 'Model_outputs/posterior_%Y%m%d_%H%M.rdata', tz = 'GMT'))
+end.time <- if(exists('end.time')) end.time else Sys.time()
+save.image(format(end.time, 'Model_outputs/posterior_%Y%m%d_%H%M.rdata', tz = 'GMT'))
 
 
 # Plot posterior distributions --------------------------------------------
@@ -500,13 +512,13 @@ save.image(format(end, 'Model_outputs/posterior_%Y%m%d_%H%M.rdata', tz = 'GMT'))
 plot(
   post,
   vars = c('deviance', 'sire.vcov', 'dam.vcov', 'int.vcov', 'resid.vcov'),
-  file = format(end, 'Model_outputs/plots_%Y%m%d_%H%M.pdf', tz = 'GMT')
+  file = format(end.time, 'Model_outputs/plots_%Y%m%d_%H%M.pdf', tz = 'GMT')
 )
 
 
 # Plot diagnostics --------------------------------------------------------
 
-pdf(format(end, "Model_outputs/diagnostics_%Y%m%d_%H%M.pdf", tz = 'GMT'))
+pdf(format(end.time, "Model_outputs/diagnostics_%Y%m%d_%H%M.pdf", tz = 'GMT'))
 
 ggplot(post.smry$post) +
   geom_histogram(aes(values), bins = 20) +
@@ -532,9 +544,9 @@ dev.off()
 
 
 cat(
-  'Run start: ', format(start), '\n',
-  'Run end: ', format(end), '\n',
+  'Run start: ', format(start.time), '\n',
+  'Run end: ', format(end.time), '\n',
   'Model elapsed: ', format(swfscMisc::autoUnits(post$timetaken)), '\n',
-  'Run elapsed: ', format(difftime(end, start)), '\n',
+  'Run elapsed: ', format(difftime(end.time, start.time)), '\n',
   sep = ''
 )
