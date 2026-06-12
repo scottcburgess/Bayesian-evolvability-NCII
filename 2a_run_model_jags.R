@@ -10,7 +10,7 @@ chains <- 6 #50
 adapt <- 100
 burnin <- 500 #500000
 total.sample <- 1000 #5000 
-thin <- 1 #7000
+thin <- 10 #7000
 
 
 # Load data ---------------------------------------------------------------
@@ -64,9 +64,9 @@ model.data <- list(
   tt.dam = trunk_tail.df$dam,
   tt.int = trunk_tail.df$interaction,
   block.mean.range = cbind(
-    round(range(trunk_tail.df$trunk)) * c(0.5, 1.5), 
-    round(range(trunk_tail.df$tail)) * c(0.5, 1.5),
-    c(-10, 10) #qlogis(c(0.001, 0.999))
+    round(range(trunk_tail.df$trunk)) * c(0.1, 1.9), 
+    round(range(trunk_tail.df$tail)) * c(0.1, 1.9),
+    c(-20, 20) #qlogis(c(0.001, 0.999))
   ),
   length1 = cbind(Trunk = trunk_tail.df$trunk, Tail = trunk_tail.df$tail),
   length2 = cbind(Trunk = trunk_tail.df$trunk, Tail = trunk_tail.df$tail),
@@ -544,8 +544,8 @@ dev.off()
 
 
 cat(
-  'Run start: ', format(start.time), '\n',
-  'Run end: ', format(end.time), '\n',
+  'Run start: ', format(start.time, tz = 'GMT'), '\n',
+  'Run end: ', format(end.time, tz = 'GMT'), '\n',
   'Model elapsed: ', format(swfscMisc::autoUnits(post$timetaken)), '\n',
   'Run elapsed: ', format(difftime(end.time, start.time)), '\n',
   sep = ''
