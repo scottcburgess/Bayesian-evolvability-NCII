@@ -158,12 +158,12 @@ addQGmetrics <- function(p) {
   p$VP <- p$VP + p$resid.vcov
   p$VR <- p$resid.vcov
   p$H <- rbind(
-    trunk = p$VA['Trunk', 'Trunk', ] / p$VP['Trunk', 'Trunk', ],
-    tail = p$VA['Tail', 'Tail', ] / p$VP['Tail', 'Tail', ]
+    Trunk = p$VA['Trunk', 'Trunk', ] / p$VP['Trunk', 'Trunk', ],
+    Tail = p$VA['Tail', 'Tail', ] / p$VP['Tail', 'Tail', ]
   )
   p$E <- rbind(
-    trunk = p$VA['Trunk', 'Trunk', ] / (p$overall.mean['Trunk', ] ^ 2),
-    tail = p$VA['Tail', 'Tail', ] / (p$overall.mean['Tail', ] ^ 2)
+    Trunk = p$VA['Trunk', 'Trunk', ] / (p$overall.mean['Trunk', ] ^ 2),
+    Tail = p$VA['Tail', 'Tail', ] / (p$overall.mean['Tail', ] ^ 2)
   )
   p
 }

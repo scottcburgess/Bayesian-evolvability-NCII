@@ -273,6 +273,9 @@ dimnames(p$block.mean)[[2]] <-
   dimnames(p$int.eff)[[2]] <- names.4
 dimnames(p$length.ppd)[[2]] <- names.2
 dimnames(p$block.mean)[[1]] <- blocks
+dimnames(p$sire.eff)[[1]] <- sires
+dimnames(p$dam.eff)[[1]] <- dams
+dimnames(p$int.eff)[[1]] <- interactions
 
 # add QG metrics to list
 p$resid.vcov[c('Hatch', 'Settle|Hatch'), , ] <- 0
