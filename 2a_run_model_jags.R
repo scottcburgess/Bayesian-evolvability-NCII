@@ -7,10 +7,10 @@ start.time <- Sys.time()
 
 # ---- MCMC parameters
 chains <- 6 #50
-adapt <- 100
-burnin <- 500 #500000
+adapt <- 1000
+burnin <- 10000 #500000
 total.sample <- 1000 #5000 
-thin <- 10 #7000
+thin <- 1 #7000
 
 
 # Load data ---------------------------------------------------------------
@@ -64,9 +64,38 @@ model.data <- list(
   tt.dam = trunk_tail.df$dam,
   tt.int = trunk_tail.df$interaction,
   block.mean.range = cbind(
-    round(range(trunk_tail.df$trunk)) * c(0.1, 1.9), 
-    round(range(trunk_tail.df$tail)) * c(0.1, 1.9),
-    c(-20, 20) #qlogis(c(0.001, 0.999))
+    range(trunk_tail.df$trunk), 
+    range(trunk_tail.df$tail),
+    h.df |> 
+      group_by(interaction) |> 
+      summarize(pct = mean(outcome), .groups = 'drop') |> 
+      mutate(
+        pct = ifelse(pct == 0, 1e-10, pct),
+        pct = ifelse(pct == 1, 1 - 1e-10, pct)
+      ) |> 
+      summarize(
+        min = qlogis(min(pct)),
+        max = qlogis(max(pct)),
+        .groups = 'drop'
+      ) |> 
+      select(min, max) |> 
+      unlist() |> 
+      unname(),
+    sh.df |> 
+      group_by(interaction) |> 
+      summarize(pct = mean(outcome), .groups = 'drop') |> 
+      mutate(
+        pct = ifelse(pct == 0, 1e-10, pct),
+        pct = ifelse(pct == 1, 1 - 1e-10, pct)
+      ) |> 
+      summarize(
+        min = qlogis(min(pct)),
+        max = qlogis(max(pct)),
+        .groups = 'drop'
+      ) |> 
+      select(min, max) |> 
+      unlist() |> 
+      unname()
   ),
   length1 = cbind(Trunk = trunk_tail.df$trunk, Tail = trunk_tail.df$tail),
   length2 = cbind(Trunk = trunk_tail.df$trunk, Tail = trunk_tail.df$tail),
@@ -85,36 +114,28 @@ model.data <- list(
 )
 
 
-# ---- Run model
+# Run Model ---------------------------------------------------------------
 
 post <- run.jags(
   data = model.data,
   model = 'model {
-    # ---- trunk and tail specific priors ----
+    # ---- prior for overall trunk and tail mean and variance ----
     for(t in 1:2) {  
-      # ---- prior for overall mean and variance ----
       overall.mean[t] ~ dunif(block.mean.range[1, t], block.mean.range[2, t])
       overall.var[t] ~ dunif(0, 1e5)
-      
-      # ---- priors for block and effect means ----
-      for(b in 1:n.blocks) {
-        block.mean[b, t] ~ dunif(block.mean.range[1, t], block.mean.range[2, t])
-      }
-    }
-    
-    # ---- hatch and settle|hatch specific priors ----
-    for(t in 3:4) {
-      for(b in 1:n.blocks) {
-        block.mean[b, t] ~ dunif(block.mean.range[1, 3], block.mean.range[2, 3])
-      }
     }
     
     # ---- priors for effects ----
     for(t in 1:4) {
+      # ---- block means ----
+      for(b in 1:n.blocks) {
+        block.mean[b, t] ~ dunif(block.mean.range[1, t], block.mean.range[2, t])
+      }
+      
       # ---- effect means ----
-      sire.mean[t] ~ dnorm(0, 1e-5)
-      dam.mean[t] ~ dnorm(0, 1e-5)
-      int.mean[t] ~ dnorm(0, 1e-5)
+      sire.mean[t] ~ dnorm(0, 1e-3)
+      dam.mean[t] ~ dnorm(0, 1e-3)
+      int.mean[t] ~ dnorm(0, 1e-3)
       
       # ---- variances ----
       sire.vcov[t, t] ~ dunif(0, 1e3)
@@ -213,7 +234,8 @@ post <- run.jags(
   }',
   monitor = c(
     'deviance', 'sire.vcov', 'dam.vcov', 'int.vcov', 'resid.vcov', 
-    'overall.mean', 'block.mean', 'length.ppd', 'hatch.ppd', 'settle_hatch.ppd'
+    'overall.mean', 'block.mean', 'length.ppd', 'hatch.ppd', 'settle_hatch.ppd',
+    'sire.mean', 'dam.mean', 'int.mean', 'sire.eff', 'dam.eff', 'int.eff'
   ), 
   inits = function() list(
     .RNG.name = 'lecuyer::RngStream',
@@ -228,12 +250,7 @@ post <- run.jags(
   method = 'parallel',
   summarise = FALSE
 )
-
-
-# Save all objects --------------------------------------------------------
-
-end.time <- if(exists('end.time')) end.time else Sys.time()
-save.image(format(end.time, 'Model_outputs/posterior_%Y%m%d_%H%M.rdata', tz = 'GMT'))
+save.image('Model_outputs/last_posterior.rdata')
 
 
 # Extract posterior to named list of arrays: p -----------------------------
@@ -242,13 +259,20 @@ p <- swfscMisc::runjags2list(post)
 
 names.2 <- c('Trunk', 'Tail')
 names.4 <- c(names.2, 'Hatch', 'Settle|Hatch')
-dimnames(p$sire.vcov) <-
-  dimnames(p$dam.vcov) <-
-  dimnames(p$int.vcov) <- 
-  dimnames(p$resid.vcov) <- list(names.4, names.4)
+dimnames(p$sire.vcov)[1:2] <-
+  dimnames(p$dam.vcov)[1:2] <-
+  dimnames(p$int.vcov)[1:2] <- 
+  dimnames(p$resid.vcov)[1:2] <- list(names.4, names.4)
 dimnames(p$overall.mean)[[1]] <- names.2
-dimnames(p$block.mean)[[2]] <- names.4
+dimnames(p$block.mean)[[2]] <- 
+  dimnames(p$sire.mean)[[1]] <- 
+  dimnames(p$dam.mean)[[1]] <- 
+  dimnames(p$int.mean)[[1]] <- 
+  dimnames(p$sire.eff)[[2]] <- 
+  dimnames(p$dam.eff)[[2]] <-
+  dimnames(p$int.eff)[[2]] <- names.4
 dimnames(p$length.ppd)[[2]] <- names.2
+dimnames(p$block.mean)[[1]] <- blocks
 
 # add QG metrics to list
 p$resid.vcov[c('Hatch', 'Settle|Hatch'), , ] <- 0
@@ -296,6 +320,7 @@ qgparams.post <- parallel::mclapply(1:dim(p$VA)[3], function(i) {
     list_transpose(simplify = FALSE)
 }, mc.cores = chains) |> 
   list_transpose(simplify = FALSE)
+save.image('Model_outputs/last_qgparams.rdata')
 
 # format 3D array of block means [metric, block, sample]
 block.mean.obs <- do.call(
@@ -326,12 +351,6 @@ vp.obs <- do.call(
   )
 )
 dimnames(vp.obs)[1:2] <- list(names.4, names.4)
-
-
-# Save all objects --------------------------------------------------------
-
-end.time <- if(exists('end.time')) end.time else Sys.time()
-save.image(format(end.time, 'Model_outputs/posterior_%Y%m%d_%H%M.rdata', tz = 'GMT'))
 
 
 # Summarize QGmvparams posteriors -----------------------------------------
