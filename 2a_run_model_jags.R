@@ -6,9 +6,9 @@ source('0_misc_funcs.R')
 start.time <- Sys.time()
 
 # ---- MCMC parameters
-chains <- 6 #50
-adapt <- 1000
-burnin <- 10000 #500000
+chains <- 1 #50
+adapt <- 100
+burnin <- 1000 #500000
 total.sample <- 1000 #5000 
 thin <- 1 #7000
 
