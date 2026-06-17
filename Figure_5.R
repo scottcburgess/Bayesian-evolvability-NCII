@@ -4,7 +4,7 @@ library('tidyverse')
 library('ggridges')
 
 # trunk Tail: load and prepare ----
-load("Model_outputs/posterior_20260605_0520.rdata") 
+load("Model_outputs/posterior_20260617_0854.rdata") 
 source('0_misc_funcs.R')
 
 ## Panel A ----
@@ -19,16 +19,16 @@ panelA <- e.params_beta |>
   ) |>
   mutate(
     param = factor(param, levels = betas),
-    value = value * 100
   ) |> 
   plot_func(
     title = 'a) Selection for longer tails', 
-    bw = 0.005, 
-    breaks = seq(0, 1, 0.05), 
-    max_x = 0.25,
+    bw = 0.00002,
+    breaks = seq(0, 1, 0.00025), 
+    max_x = 0.0015,
     param_df = param_df
   ) +
-  theme(plot.title = element_text(size = 9))
+  theme(plot.title = element_text(size = 9),
+        axis.text.x = element_text(angle = 45, hjust = 1))
 
 
 ## Panel B ----
@@ -43,16 +43,16 @@ panelB <- e.params_beta |>
   ) |>
   mutate(
     param = factor(param, levels = betas),
-    value = value * 100
   ) |> 
   plot_func(
     title = 'b) Selection for short trunks, short tails', 
-    bw = 0.04,
-    breaks = seq(0, 1, 0.05), 
-    max_x = 0.25,
+    bw = 0.00002,
+    breaks = seq(0, 1, 0.00025), 
+    max_x = 0.0015,
     param_df = param_df
   ) +
-  theme(plot.title = element_text(size = 9))
+  theme(plot.title = element_text(size = 9),
+        axis.text.x = element_text(angle = 45, hjust = 1))
 
 
 ## Panel C ----
@@ -67,22 +67,22 @@ panelC <- e.params_beta |>
   ) |>
   mutate(
     param = factor(param, levels = betas),
-    value = value * 100
   ) |> 
   plot_func(
     title = 'c) Selection for long trunks, short tails', 
-    bw = 0.04,
-    breaks = seq(0, 1, 0.05), 
-    max_x = 0.25,
+    bw = 0.00002,
+    breaks = seq(0, 1, 0.00025), 
+    max_x = 0.0015,
     param_df = param_df
   ) +
-  theme(plot.title = element_text(size = 9))
+  theme(plot.title = element_text(size = 9),
+        axis.text.x = element_text(angle = 45, hjust = 1))
 
 
 fig5 <- gridExtra::grid.arrange(
   panelA, panelB, panelC, nrow = 1,
-  bottom = 'Evolvability (%)',
-  left = 'Metric'
+  bottom = 'Evolvability',
+  left = 'Density'
 )
 fig5
 

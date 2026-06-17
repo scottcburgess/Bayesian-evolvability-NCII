@@ -26,7 +26,7 @@ options(scipen = 10, digits = 3)
 rm(list = ls())
 library(tidyverse)
 library(runjags)
-load("Model_outputs/Model_II_posterior_20260605_0120.rdata")
+load("Model_outputs/posterior_20260617_0854.rdata")
 source("0_misc_funcs.R")
 elapsed <- swfscMisc::autoUnits(post$timetaken)
 ```
