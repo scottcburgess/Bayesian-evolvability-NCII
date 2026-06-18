@@ -226,7 +226,7 @@ e.params_beta |>
   pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
 ```
 
-## Response to selection from covariance. Approach 3  
+## Response to selection (%) from covariance. Approach 3  
 ```{r}
 smry <- sg |> 
   filter(!is.na(sg.pct)) |> 
@@ -243,7 +243,7 @@ smry <- sg |>
 pander::pander(smry, split.tables = Inf, keep.line.breaks = TRUE)
 ```
 
-## Total response to selection from covariance  
+## Total response to selection (%) from covariance  
 (Still need to check the correct way to add the covariances)  
 ```{r}
 smry <- sg |> 
