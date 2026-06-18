@@ -177,7 +177,7 @@ data.frame(ratio = e.ratio) |>
   labs(x = "Tail / Trunk Evolvability", y = "Count")
 ```
 
-## Evolvability (from G matrix) v1  
+## Evolvability (from G matrix) Approach 1  
 This is for a random set of selection gradients.  
 Multiply eB by 100 to get in units of percent.  
 ```{r}
@@ -198,7 +198,7 @@ lapply(e.names, function(x) {
   pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
 ```
 
-## Evolvability (from G matrix) v2 
+## Evolvability (from G matrix) Approach 2 
 This is for a specific set of selection gradients:    
 Beta_index = 1 is $\beta = \begin{bmatrix} 0 \\ 1 \end{bmatrix}$ = strong selection for longer tails only  
 Beta_index = 2 is $\beta = \begin{bmatrix} -(1/\sqrt2) \\ -(1/\sqrt2) \end{bmatrix}$ = strong selection for shorter trunks and shorter tails  
@@ -224,4 +224,42 @@ e.params_beta |>
   unnest_wider(summary) |> 
   arrange(metric, Beta_index) |> 
   pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
+```
+
+## Response to selection from covariance. Approach 3  
+```{r}
+smry <- sg |> 
+  filter(!is.na(sg.pct)) |> 
+  rename(value = 'sg.pct', param = z.W) |> 
+  mutate(param = factor(param, levels = rev(sg.df$z.W))) |> 
+  select(value, param) |>
+  group_by(param) |> 
+  summarise(
+    stats = list(vecSmry(value)),
+    .groups = "drop"
+  ) %>%
+  tidyr::unnest_wider(stats)
+
+pander::pander(smry, split.tables = Inf, keep.line.breaks = TRUE)
+```
+
+## Total response to selection from covariance  
+(Still need to check the correct way to add the covariances)  
+```{r}
+smry <- sg |> 
+  rename(value = 'sg.pct', param = z) |> 
+  mutate(param = factor(param, levels = rev(sg.df$z[1:2]))) |> 
+  pivot_wider(names_from = W,
+              values_from = value,
+              id_cols = c(block, sample, param)) |> 
+  mutate(value = Hatch + `Settle|Hatch`) |> 
+  select(value, param) |> 
+  group_by(param) |> 
+  summarise(
+    stats = list(vecSmry(value)),
+    .groups = "drop"
+  ) %>%
+  tidyr::unnest_wider(stats)
+
+pander::pander(smry, split.tables = Inf, keep.line.breaks = TRUE)
 ```
