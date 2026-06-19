@@ -46,7 +46,7 @@ End Time: `r format(end.time, "%Y-%m-%d %H:%M")`
 ```{r, include=FALSE}
 smry <- summary(
   post, 
-  vars = c("deviance", "sire.vcov", "dam.vcov", "int.vcov", "resid.vcov")
+  vars = c("deviance", "sire.vcov", "dam.vcov", "int.vcov", "resid.vcov", "block.mean", "overall.mean")
 )
 ```
 ```{r}
@@ -130,6 +130,22 @@ smry <- apply(p$H,1,vecSmry)
   facet_wrap(~ name, scales = "free")
 ```
 \newpage  
+
+## Summarize QGmvparams posteriors  
+### Block means on expected data scale  
+Hatching measured in blocks `r sort(unique(h.df$block))`  
+Settling measured in blocks `r sort(unique(sh.df$block))`  
+```{r}
+block_names <- dimnames(block.mean.obs.smry)[[3]]
+tab <- purrr::map_dfr(seq_len(dim(block.mean.obs.smry)[3]), \(i) {
+  as.data.frame(block.mean.obs.smry[, , i]) |>
+    tibble::rownames_to_column("Stage") |>
+    dplyr::mutate(Block = i)
+}) |>
+  dplyr::select(Block, Stage, dplyr::everything())
+pander::pander(tab, digits = 2)
+```
+\newpage 
 
 ## Evolvability (for single traits)
 ```{r}
