@@ -190,6 +190,26 @@ tab <- purrr::map_dfr(seq_len(dim(block.mean.obs.smry)[3]), \(i) {
   dplyr::select(Block, Stage, dplyr::everything())
 pander::pander(tab, digits = 2)
 ```
+
+Summary across blocks  
+```{r}
+smry <- tab |> 
+  dplyr::group_by(Stage) |> 
+  dplyr::select(Stage,median,mode) |> 
+  dplyr::summarize(min = min(median, na.rm = T),
+                   max = max(median, na.rm = T),
+                   mean_median = mean(median, na.rm = T),
+                   mean_mode = mean(mode, na.rm = T))
+pander::pander(smry, digits = 2)
+```
+
+### Block means on latent scale  
+```{r}
+df <- as.data.frame(rowMeans(p$block.mean, dims = 2))
+pander::pander(df[,c('Hatch','Settle|Hatch')], digits = 2)
+```
+
+
 \newpage 
 
 ## Evolvability (for single traits)
