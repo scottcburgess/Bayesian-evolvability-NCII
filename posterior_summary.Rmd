@@ -180,15 +180,15 @@ df |>
 ### Block means on expected data scale  
 Hatching measured in blocks `r sort(unique(h.df$block))`  
 Settling measured in blocks `r sort(unique(sh.df$block))`  
+
 ```{r}
-block_names <- dimnames(block.mean.obs.smry)[[3]]
-tab <- purrr::map_dfr(seq_len(dim(block.mean.obs.smry)[3]), \(i) {
-  as.data.frame(block.mean.obs.smry[, , i]) |>
-    tibble::rownames_to_column("Stage") |>
-    dplyr::mutate(Block = i)
-}) |>
-  dplyr::select(Block, Stage, dplyr::everything())
-pander::pander(tab, digits = 2)
+dimnames(block.mean.obs.smry)[[3]] <- blocks
+block.mean.obs.smry |> 
+  as.data.frame.table() |> 
+  setNames(c('Stage', 'smry', 'Block', 'value')) |> 
+  pivot_wider(names_from = 'smry', values_from = 'value') |> 
+  select(Block, Stage, everything()) |> 
+  pander::pander(digits = 2)
 ```
 
 Summary across blocks  

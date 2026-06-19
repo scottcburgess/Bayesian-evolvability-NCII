@@ -69,33 +69,17 @@ model.data <- list(
     h.df |> 
       group_by(interaction) |> 
       summarize(pct = mean(outcome), .groups = 'drop') |> 
-      mutate(
-        pct = ifelse(pct == 0, 1e-10, pct),
-        pct = ifelse(pct == 1, 1 - 1e-10, pct)
-      ) |> 
-      summarize(
-        min = qlogis(min(pct)),
-        max = qlogis(max(pct)),
-        .groups = 'drop'
-      ) |> 
-      select(min, max) |> 
-      unlist() |> 
-      unname(),
+      filter(pct > 0 & pct < 1) |> 
+      pull('pct') |> 
+      qlogis() |> 
+      range(),
     sh.df |> 
       group_by(interaction) |> 
       summarize(pct = mean(outcome), .groups = 'drop') |> 
-      mutate(
-        pct = ifelse(pct == 0, 1e-10, pct),
-        pct = ifelse(pct == 1, 1 - 1e-10, pct)
-      ) |> 
-      summarize(
-        min = qlogis(min(pct)),
-        max = qlogis(max(pct)),
-        .groups = 'drop'
-      ) |> 
-      select(min, max) |> 
-      unlist() |> 
-      unname()
+      filter(pct > 0 & pct < 1) |> 
+      pull('pct') |> 
+      qlogis() |> 
+      range()
   ),
   length1 = cbind(Trunk = trunk_tail.df$trunk, Tail = trunk_tail.df$tail),
   length2 = cbind(Trunk = trunk_tail.df$trunk, Tail = trunk_tail.df$tail),
@@ -303,8 +287,6 @@ qgparams.post <- parallel::mclapply(1:dim(p$VA)[3], function(i) {
   # iterate over blocks
   lapply(1:dim(p$block.mean)[1], function(b) {
     mu <- p$block.mean[b, , i]
-    va <- VA
-    vp <- VP
     # identify metrics without this block
     not.missing <- which(!is.na(mu))
     qg <- QGglmm::QGmvparams(
@@ -316,7 +298,9 @@ qgparams.post <- parallel::mclapply(1:dim(p$VA)[3], function(i) {
     ) 
     # reload results to original vectors/matrices to preserve NAs
     mu[not.missing] <- qg$mean.obs
+    va <- VA
     va[not.missing, not.missing] <- qg$vcv.G.obs
+    vp <- VP
     vp[not.missing, not.missing] <- qg$vcv.P.obs
     list(mu.obs = mu, va.obs = va, vp.obs = vp)
   }) |> 
