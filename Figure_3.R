@@ -3,7 +3,7 @@ library('tidyverse')
 library('ggridges')
 
 # Trunk Tail: load and prepare ----
-load("Model_outputs/posterior_20260605_0520.rdata")
+load("Model_outputs/posterior_20260617_0854.rdata")
 
 source('0_misc_funcs.R')
 
