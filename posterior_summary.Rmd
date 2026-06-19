@@ -209,6 +209,15 @@ df <- as.data.frame(rowMeans(p$block.mean, dims = 2))
 pander::pander(df[,c('Hatch','Settle|Hatch')], digits = 2)
 ```
 
+### VA for settling and hatching on data scale across blocks
+```{r}
+"Help me, Obi-Wan Kenobi; You're My Only Hope"
+```
+
+### VP for settling and hatching on data scale across blocks
+```{r}
+"Help me, Obi-Wan Kenobi; You're My Only Hope"
+```
 
 \newpage 
 
