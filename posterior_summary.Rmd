@@ -115,12 +115,18 @@ plot(smry$plot + scale_x_log10())
 ```
 \newpage  
 
-## Heritability 
+## Variance partitioning 
+Latent scale  
+$(VA / VP) \times 100$  
 ```{r}
-smry <- apply(p$H,1,vecSmry)
- pander::pander(smry, split.tables = Inf, keep.line.breaks = TRUE) 
+df <- rbind(
+    Trunk = (p$VA['Trunk', 'Trunk', ] / p$VP['Trunk', 'Trunk', ]*100),
+    Tail = (p$VA['Tail', 'Tail', ] / p$VP['Tail', 'Tail', ]*100)
+  )
+smry <- apply(df,1,vecSmry)
+pander::pander(smry, split.tables = Inf, keep.line.breaks = TRUE) 
 
- p$H |>
+df |>
   t() |>
   as.data.frame() |>
   pivot_longer(everything()) |>
@@ -129,6 +135,45 @@ smry <- apply(p$H,1,vecSmry)
   labs(x = "Value", y = "Count") +
   facet_wrap(~ name, scales = "free")
 ```
+
+$(VM / VP) \times 100$    
+```{r}
+df <- rbind(
+    Trunk = (p$VM['Trunk', 'Trunk', ] / p$VP['Trunk', 'Trunk', ]*100),
+    Tail = (p$VM['Tail', 'Tail', ] / p$VP['Tail', 'Tail', ]*100)
+  )
+smry <- apply(df,1,vecSmry)
+pander::pander(smry, split.tables = Inf, keep.line.breaks = TRUE) 
+
+df |>
+  t() |>
+  as.data.frame() |>
+  pivot_longer(everything()) |>
+  ggplot(aes(value)) +
+  geom_histogram(bins = 100) +
+  labs(x = "Value", y = "Count") +
+  facet_wrap(~ name, scales = "free")
+```
+
+$(VD / VP) \times 100$    
+```{r}
+df <- rbind(
+    Trunk = (p$VD['Trunk', 'Trunk', ] / p$VP['Trunk', 'Trunk', ])*100,
+    Tail = (p$VD['Tail', 'Tail', ] / p$VP['Tail', 'Tail', ])*100
+  )
+smry <- apply(df,1,vecSmry)
+pander::pander(smry, split.tables = Inf, keep.line.breaks = TRUE) 
+
+df |>
+  t() |>
+  as.data.frame() |>
+  pivot_longer(everything()) |>
+  ggplot(aes(value)) +
+  geom_histogram(bins = 100) +
+  labs(x = "Value", y = "Count") +
+  facet_wrap(~ name, scales = "free")
+```
+
 \newpage  
 
 ## Summarize QGmvparams posteriors  
