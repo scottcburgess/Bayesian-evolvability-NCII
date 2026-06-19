@@ -318,6 +318,7 @@ block.mean.obs <- do.call(
   )
 )
 dimnames(block.mean.obs)[[1]] <- names.4
+dimnames(block.mean.obs)[[2]] <- blocks
 
 # format 4D array of VA matrices [metric, metric, block, sample]
 va.obs <- do.call(
@@ -328,6 +329,7 @@ va.obs <- do.call(
   )
 )
 dimnames(va.obs)[1:2] <- list(names.4, names.4)
+dimnames(va.obs)[[3]] <- blocks
 
 # format 4D array of VP matrices [metric, metric, block, sample]
 vp.obs <- do.call(
@@ -338,6 +340,7 @@ vp.obs <- do.call(
   )
 )
 dimnames(vp.obs)[1:2] <- list(names.4, names.4)
+dimnames(vp.obs)[[3]] <- blocks
 
 
 # Summarize QGmvparams posteriors -----------------------------------------

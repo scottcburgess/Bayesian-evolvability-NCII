@@ -28,7 +28,7 @@ cov.smry <- function(x, gt = 0) {
   
   metrics <- dimnames(x)[[1]]
   
-  cov.df <-   data.frame(
+  cov.df <- data.frame(
     metric1 = metrics,
     metric2 = metrics
   ) |> 
