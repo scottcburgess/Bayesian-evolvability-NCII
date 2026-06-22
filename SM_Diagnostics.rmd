@@ -28,7 +28,7 @@ options(scipen = 9999)
 From the posterior of the model, we show histograms of the autocorrelation (AC.####), potential scale reduction factor (PSRF), and effective sample size (ESS) values for all parameters of interest in the model. Following these are the posterior predictive check distribution (PPD) expressed as the distribution of the deviation of the observed values from the PPD values. Finally, for the parameters of interest, we show the posterior trace, histogram, expected cumulative distribution (ECDF), and autocorrelation distribution.
 
 ```{r}
-load('Model_outputs/posterior_20260605_0520.rdata')
+load('Model_outputs/posterior_20260622_0449.rdata')
 ```
 
 ### MCMC parameters  
