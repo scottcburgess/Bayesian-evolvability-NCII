@@ -26,7 +26,7 @@ options(scipen = 10, digits = 3)
 rm(list = ls())
 library(tidyverse)
 library(runjags)
-load("Model_outputs/posterior_20260617_0854.rdata")
+load("Model_outputs/posterior_20260622_0449.rdata")
 source("0_misc_funcs.R")
 elapsed <- swfscMisc::autoUnits(post$timetaken)
 ```
@@ -184,9 +184,21 @@ df |>
 
 ## Summarize QGmvparams posteriors  
 ### Block means on expected data scale  
-Hatching measured in blocks `r blocks[sort(unique(h.df$block))]`  
-Settling measured in blocks `r blocks[sort(unique(sh.df$block))]`  
+```{r, echo = F}
+df_original <- read.csv("Data/Moccidentalis All Traits.csv")
+hatch_blocks <- df_original |> 
+  filter(trait == "hatching") |> 
+  distinct(block) |> 
+  arrange(block)
+settle_blocks <- df_original |> 
+  filter(trait == "settling") |> 
+  distinct(block) |> 
+  arrange(block)  
+```
 
+Hatching actually measured in blocks `r hatch_blocks$block`  
+Settling actually measured in blocks `r settle_blocks$block`  
+But **Block** has been re-coded for running model in runjags().    
 ```{r}
 tab <- block.mean.obs.smry |> 
   as.data.frame.table() |> 
@@ -196,7 +208,8 @@ tab <- block.mean.obs.smry |>
     Block %in% blocks[sort(unique(union(h.df$block, sh.df$block)))]
   ) |> 
   pivot_wider(names_from = 'smry', values_from = 'value') |> 
-  select(Block, Stage, everything())
+  select(Block, Stage, everything()) |> 
+  arrange(Stage, Block)
 
 pander::pander(tab, digits = 2, split.tables = Inf, keep.line.breaks = TRUE)
 ```
@@ -239,6 +252,7 @@ lapply(names(smry), function(b) {
   bind_rows() |> 
   filter(stringr::str_detect(metric, 'Hatch')) |> 
   rename(Stage = 'metric') |> 
+  arrange(Stage) |> 
   pander::pander(digits = 2, split.tables = Inf, keep.line.breaks = TRUE)
 ```
 
@@ -254,8 +268,68 @@ lapply(names(smry), function(b) {
   bind_rows() |> 
   filter(stringr::str_detect(metric, 'Hatch')) |> 
   rename(Stage = 'metric') |> 
+  arrange(Stage) |> 
   pander::pander(digits = 2, split.tables = Inf, keep.line.breaks = TRUE)
 ```
+
+\newpage 
+## Phenotypic selection gradients  
+$\boldsymbol{\beta} = \mathbf{P}^{-1}\mathbf{s}$  
+```{r, echo = F}
+betas <- lapply(1:dim(p$VP)[3], function(i) {
+  P_mat <- p$VP[c('Trunk', 'Tail'),
+                c('Trunk', 'Tail'), i]
+  
+  sd_hatch <- p$VP[c('Trunk', 'Tail'),
+                   c('Hatch'), i]
+  
+  sd_settle <- p$VP[c('Trunk', 'Tail'),
+                    c('Settle|Hatch'), i]
+  
+  beta_hatch  <- solve(P_mat, sd_hatch)
+  beta_settle <- solve(P_mat, sd_settle)
+  
+  list(beta_hatch = beta_hatch,
+       beta_settle = beta_settle)
+})
+beta_hatch_mat <- do.call(cbind, lapply(betas, `[[`, "beta_hatch"))
+beta_settle_mat <- do.call(cbind, lapply(betas, `[[`, "beta_settle"))
+```
+
+Hatching as fitness  
+```{r}
+beta_hatch_mat |> 
+  apply(1, vecSmry) |> 
+  pander::pander(split.tables = Inf, keep.line.breaks = TRUE) 
+
+beta_hatch_mat |>
+  t() |>
+  as.data.frame() |>
+  pivot_longer(everything()) |>
+  ggplot(aes(value)) +
+  geom_histogram(bins = 100) +
+  geom_vline(xintercept = 0, col = "blue") +
+  labs(x = "Value", y = "Count") +
+  facet_wrap(~ name, scales = "free")
+```
+
+Settling given hatching as fitness  
+```{r}
+beta_settle_mat |> 
+  apply(1, vecSmry) |> 
+  pander::pander(split.tables = Inf, keep.line.breaks = TRUE) 
+
+beta_settle_mat |>
+  t() |>
+  as.data.frame() |>
+  pivot_longer(everything()) |>
+  ggplot(aes(value)) +
+  geom_histogram(bins = 100) +
+  geom_vline(xintercept = 0, col = "blue") +
+  labs(x = "Value", y = "Count") +
+  facet_wrap(~ name, scales = "free")
+```
+
 
 \newpage 
 
