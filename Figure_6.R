@@ -2,7 +2,7 @@ rm(list=ls())
 library('tidyverse')
 library('ggridges')
 
-load("Model_outputs/posterior_20260617_0854.rdata") 
+load("Model_outputs/posterior_20260622_0449.rdata") 
 source('0_misc_funcs.R')
 
 panelA <- sg |> 
@@ -11,10 +11,10 @@ panelA <- sg |>
   mutate(param = factor(param, levels = unique(sg.df$z))) |> 
   plot_func(
     title = 'a) Hatching',
-    bw = 0.001, 
-    breaks = seq(-1, 1, 0.05), 
-    min_x = -0.2,
-    max_x = 0.2,
+    bw = 0.008, 
+    breaks = seq(-1, 1, 0.1), 
+    min_x = -0.7,
+    max_x = 0.7,
     param_df = data.frame(
       param = sg.df$z,
       color = c('#a6dba0', '#1b7837'),
@@ -35,7 +35,7 @@ panelB <- sg |>
   mutate(param = factor(param, levels = unique(sg.df$z))) |> 
   plot_func(
     title = 'b) Settlement',
-    bw = 0.005, 
+    bw = 0.008, 
     breaks = seq(-1, 1, 0.1), 
     min_x = -0.7,
     max_x = 0.7,
