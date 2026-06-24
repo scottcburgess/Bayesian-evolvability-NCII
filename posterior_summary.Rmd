@@ -26,7 +26,7 @@ options(scipen = 10, digits = 3)
 rm(list = ls())
 library(tidyverse)
 library(runjags)
-load("Model_outputs/posterior_20260620_1724.rdata")
+load("Model_outputs/posterior_20260622_0449.rdata")
 source("0_misc_funcs.R")
 elapsed <- swfscMisc::autoUnits(post$timetaken)
 ```
@@ -184,9 +184,21 @@ df |>
 
 ## Summarize QGmvparams posteriors  
 ### Block means on expected data scale  
-Hatching measured in blocks `r blocks[sort(unique(h.df$block))]`  
-Settling measured in blocks `r blocks[sort(unique(sh.df$block))]`  
+```{r, echo = F}
+df_original <- read.csv("Data/Moccidentalis All Traits.csv")
+hatch_blocks <- df_original |> 
+  filter(trait == "hatching") |> 
+  distinct(block) |> 
+  arrange(block)
+settle_blocks <- df_original |> 
+  filter(trait == "settling") |> 
+  distinct(block) |> 
+  arrange(block)  
+```
 
+Hatching actually measured in blocks `r hatch_blocks$block`  
+Settling actually measured in blocks `r settle_blocks$block`  
+But **Block** has been re-coded for running model in runjags().    
 ```{r}
 tab <- block.mean.obs.smry |> 
   as.data.frame.table() |> 
@@ -196,7 +208,8 @@ tab <- block.mean.obs.smry |>
     Block %in% blocks[sort(unique(union(h.df$block, sh.df$block)))]
   ) |> 
   pivot_wider(names_from = 'smry', values_from = 'value') |> 
-  select(Block, Stage, everything())
+  select(Block, Stage, everything()) |> 
+  arrange(Stage, Block)
 
 pander::pander(tab, digits = 2, split.tables = Inf, keep.line.breaks = TRUE)
 ```
@@ -239,6 +252,7 @@ lapply(names(smry), function(b) {
   bind_rows() |> 
   filter(stringr::str_detect(metric, 'Hatch')) |> 
   rename(Stage = 'metric') |> 
+  arrange(Stage) |> 
   pander::pander(digits = 2, split.tables = Inf, keep.line.breaks = TRUE)
 ```
 
@@ -254,8 +268,32 @@ lapply(names(smry), function(b) {
   bind_rows() |> 
   filter(stringr::str_detect(metric, 'Hatch')) |> 
   rename(Stage = 'metric') |> 
+  arrange(Stage) |> 
   pander::pander(digits = 2, split.tables = Inf, keep.line.breaks = TRUE)
 ```
+
+\newpage 
+## Genetic selection gradients  
+$\boldsymbol{\beta}_{g} = \mathbf{G}^{-1}\mathbf{s}_{g}$  
+```{r, echo = F}
+
+```
+
+Hatching as fitness  
+```{r}
+
+```
+
+Settling given hatching as fitness  
+```{r}
+
+```
+
+"Total" fitness  
+```{r}
+
+```
+
 
 \newpage 
 
@@ -375,8 +413,7 @@ sg |>
   pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
 ```
 
-## Total response to selection (%) from covariance  
-(Still need to check the correct way to add the covariances)  
+## Total response to selection (%) from covariance    
 ```{r}
 sg |> 
   rename(value = 'sg.pct', param = z) |> 

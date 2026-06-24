@@ -463,6 +463,46 @@ sg <- lapply(1:nrow(sg.df), function(i) {
 }) |> 
   bind_rows()
 
+# Add total response to selection
+sg <- sg |> 
+  bind_rows(
+    sg |> 
+      group_by(block, sample, z) |> 
+      summarize(
+        sg = sum(sg),
+        block.mean = mean(block.mean),
+        sg.pct = sum(sg.pct), 
+        .groups = 'drop'
+      ) |> 
+      mutate(W = 'Total')
+  )
+
+# genetic selection gradient
+# beta_g = G^-1 * s_g
+traits <- unique(sg$z)
+beta_g <- lapply(unique(sg$W), function(w) {
+  lapply(dimnames(va.obs)[[3]], function(b) {
+    sg.w.b <- sg |> 
+      filter(block == b, W == w) |> 
+      select(sample, z, sg) |> 
+      pivot_wider(names_from = 'z', values_from = 'sg') |> 
+      arrange(sample) |> 
+      select(-sample) |> 
+      as.matrix()
+    
+    sapply(1:dim(sg.w.b)[1], function(i) {
+      if(any(is.na(sg.w.b[i, traits]))) return(setNames(c(NA, NA), traits))
+      solve(va.obs[traits, traits, b, i], sg.w.b[i, traits])
+    }) |> 
+      t() |> 
+      as.data.frame() |> 
+      mutate(W = w, block = b) |> 
+      select(W, block, everything())
+  })
+}) |> 
+  bind_rows()
+
+
 
 # CODA summary ------------------------------------------------------------
 
