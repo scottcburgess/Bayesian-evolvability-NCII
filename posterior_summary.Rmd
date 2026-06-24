@@ -449,8 +449,7 @@ sg |>
   pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
 ```
 
-## Total response to selection (%) from covariance  
-(Still need to check the correct way to add the covariances)  
+## Total response to selection (%) from covariance    
 ```{r}
 sg |> 
   rename(value = 'sg.pct', param = z) |> 
