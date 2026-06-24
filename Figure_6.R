@@ -55,14 +55,15 @@ panelB <- sg |>
 
 panelC <- sg |> 
   rename(value = 'sg.pct', param = z) |> 
-  mutate(param = factor(param, levels = rev(sg.df$z[1:2]))) |> 
+  # mutate(param = factor(param, levels = rev(sg.df$z[1:2]))) |> 
   pivot_wider(
     names_from = W,
     values_from = value,
     id_cols = c(block, sample, param)
   ) |> 
-  mutate(value = Hatch + `Settle|Hatch`) |> 
-  select(value, param) |> 
+  mutate(value = Hatch + `Settle|Hatch`,
+         param = factor(param, levels = rev(sg.df$z[1:2]))) |> 
+  select(value, param) |>
   plot_func(
     title = 'c) Total response',
     bw = 0.008, 
@@ -70,9 +71,9 @@ panelC <- sg |>
     min_x = -0.9,
     max_x = 0.9,
     param_df = data.frame(
-      param = sg.df$z,
+      param = c("Tail", "Trunk"),
       color = c('#fdb863', '#e66101'),
-      param_label = sapply(sg.df$z, function(x) paste0('`', x, '`'))
+      param_label = c("Tail", "Trunk")
     )
   ) +
   geom_vline(xintercept = 0, color = "grey50", linetype = "dashed") +
@@ -82,7 +83,7 @@ panelC <- sg |>
     axis.title.y = element_text(size = 12, hjust = 0.5),
     axis.text.x = element_text(angle = 45, hjust = 1)
   )
-
+# Cannot get the Tail Trunk order in c) to match a) and b)!
 
 
 fig6 <- gridExtra::grid.arrange(
