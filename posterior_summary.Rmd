@@ -4,6 +4,8 @@ output:
   html_document:
     toc: yes
     toc_float: yes
+params:
+  posterior_file: posterior_20260622_0449.rdata
 knit:
   (function(inputFile, encoding) {
     rmarkdown::render(inputFile,
@@ -23,10 +25,9 @@ knitr::opts_chunk$set(
 )
 options(scipen = 10, digits = 3)
 
-rm(list = ls())
 library(tidyverse)
 library(runjags)
-load("Model_outputs/posterior_20260622_0449.rdata")
+load(file.path('Model_outputs', params$posterior_file))
 source("0_misc_funcs.R")
 elapsed <- swfscMisc::autoUnits(post$timetaken)
 ```

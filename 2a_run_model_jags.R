@@ -556,7 +556,8 @@ ppc.smry <- smrzPPC(ppc)
 # Save all objects --------------------------------------------------------
 
 end.time <- if(exists('end.time')) end.time else Sys.time()
-save.image(format(end.time, 'Model_outputs/posterior_%Y%m%d_%H%M.rdata', tz = 'GMT'))
+post.file <- format(end.time, 'posterior_%Y%m%d_%H%M.rdata', tz = 'GMT')
+save.image(file.path('Model_outputs', post.file))
 
 
 # Plot posterior distributions --------------------------------------------
@@ -593,6 +594,12 @@ ggplot(ppc) +
   labs(x = 'Metric Difference (Observed - PPD)', y = 'Count')
 
 dev.off()
+
+
+rmarkdown::render(
+  'posterior_summary.Rmd',
+  params = list(posterior_file = post.file)
+)
 
 
 cat(
