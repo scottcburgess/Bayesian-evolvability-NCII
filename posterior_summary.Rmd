@@ -275,23 +275,18 @@ lapply(names(smry), function(b) {
 \newpage 
 ## Genetic selection gradients  
 $\boldsymbol{\beta}_{g} = \mathbf{G}^{-1}\mathbf{s}_{g}$  
-```{r, echo = F}
-
-```
-
-Hatching as fitness  
 ```{r}
+tabs <- lapply(split(beta_g, beta_g$W), function(dat) {
+  out <- rbind(
+    Trunk = vecSmry(dat$Trunk),
+    Tail  = vecSmry(dat$Tail)
+  )
+  cbind(W = unique(dat$W), Variable = rownames(out), out)
+})
 
-```
-
-Settling given hatching as fitness  
-```{r}
-
-```
-
-"Total" fitness  
-```{r}
-
+final_tab <- do.call(rbind, tabs)
+rownames(final_tab) <- NULL
+pander::pander(final_tab)
 ```
 
 
@@ -404,27 +399,6 @@ sg |>
   rename(value = 'sg.pct', param = z.W) |> 
   mutate(param = factor(param, levels = rev(sg.df$z.W))) |> 
   select(value, param) |>
-  group_by(param) |> 
-  summarise(
-    stats = list(vecSmry(value)),
-    .groups = "drop"
-  ) |> 
-  tidyr::unnest_wider(stats) |> 
-  pander::pander(split.tables = Inf, keep.line.breaks = TRUE)
-```
-
-## Total response to selection (%) from covariance    
-```{r}
-sg |> 
-  rename(value = 'sg.pct', param = z) |> 
-  mutate(param = factor(param, levels = rev(sg.df$z[1:2]))) |> 
-  pivot_wider(
-    names_from = W,
-    values_from = value,
-    id_cols = c(block, sample, param)
-  ) |> 
-  mutate(value = Hatch + `Settle|Hatch`) |> 
-  select(value, param) |> 
   group_by(param) |> 
   summarise(
     stats = list(vecSmry(value)),
