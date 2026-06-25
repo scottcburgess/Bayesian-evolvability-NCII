@@ -6,11 +6,9 @@ source('0_misc_funcs.R')
 start.time <- Sys.time()
 
 # ---- MCMC parameters --------------------------------------------------------
-# Higher thin needed: Gibbs autocorrelation for variance components is
-# typically lag 100-500 even after reparameterisation.
-chains       <- 10
-adapt        <- 5000    # longer adapt so JAGS tunes the Wishart sampler
-burnin       <- 100000
+chains       <- 6  #50
+adapt        <- 1000 #5000    # longer adapt so JAGS tunes the Wishart sampler
+burnin       <- 1000  #50000
 total.sample <- 1000
 thin         <- 1000 #100     # increase further if autocorr.plot() shows residual AC
 
@@ -122,15 +120,6 @@ post <- run.jags(
       int.mean[t]  ~ dnorm(0, 1e-3)
     }
 
-    # =========================================================================
-    # Improvement 1: Wishart prior on precision matrices
-    # -------------------------------------------------------------------------
-    # dwish(R, df) is conjugate with dmnorm, enabling JAGS to block-update the
-    # entire precision matrix in one step rather than element-by-element Gibbs.
-    # This dramatically reduces autocorrelation in variance components.
-    # vcov = inverse(prec) is computed as a deterministic node for output.
-    # =========================================================================
-
     sire.prec[1:4, 1:4]  ~ dwish(wishart.R[,], wishart.df)
     dam.prec[1:4, 1:4]   ~ dwish(wishart.R[,], wishart.df)
     int.prec[1:4, 1:4]   ~ dwish(wishart.R[,], wishart.df)
@@ -153,20 +142,6 @@ post <- run.jags(
     resid.vcov[3, 4] <- 0
     resid.vcov[4, 3] <- 0
     resid.vcov[4, 4] <- 0
-
-    # =========================================================================
-    # Random effects: centred dmnorm with Wishart precision
-    # -------------------------------------------------------------------------
-    # chol() is not available in JAGS, so the non-centred Cholesky approach
-    # is not feasible. Instead we use centred dmnorm directly with the
-    # Wishart-sampled precision matrices. This is still a major improvement
-    # over the original model because dwish is conjugate with dmnorm: JAGS
-    # recognises the pair and block-updates the entire precision matrix in one
-    # Gibbs step, eliminating the element-by-element correlation that caused
-    # slow mixing before. The random effects themselves are sampled one group
-    # at a time as a 4-variate block, which is also more efficient than the
-    # original scalar-by-scalar sampling.
-    # =========================================================================
 
     for(s in 1:n.sires) {
       sire.eff[s, 1:4] ~ dmnorm(sire.mean[], sire.prec[,])
@@ -229,9 +204,6 @@ post <- run.jags(
     'sire.eff', 'dam.eff', 'int.eff'
   ),
   inits = function() {
-    # Provide reasonable starting precision matrices to avoid extreme initial values.
-    # Starting at identity precision = identity covariance, which is well within
-    # the posterior support for most biological trait models.
     list(
       sire.prec  = diag(4),
       dam.prec   = diag(4),
