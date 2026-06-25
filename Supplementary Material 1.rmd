@@ -1,5 +1,5 @@
 ---
-title: "Supplemental Materials - Model MCMC Diagnostic Plots"
+title: "Supplemental Material 1 - Model MCMC Diagnostic Plots"
 output: pdf_document
 knit:
   (function(inputFile, encoding) {
