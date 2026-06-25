@@ -48,10 +48,12 @@ sh.df <- filter(hatch_settle.df, metric == 'settling')
 # Wishart scale matrix: diagonal = 1/df so marginal variance ~ 1/Gamma(df/2, df/2)
 # df = 5 (minimally informative: df must be >= p = 4)
 wishart.df <- 5
-# Scale matrix chosen so prior mode of each variance component is ~1
-# (mode of Wishart precision = (df - p - 1) * R; set to identity => R = I/(df-p-1))
-# For weak prior use R = (1/df) * I so prior mean of precision diagonal = 1.
-wishart.R  <- diag(wishart.df, 4)    # passed to dwish as R; JAGS parameterises as dwish(R, df)
+# Scale matrix calibrated to match the original dunif(0, 1e3) variance prior.
+# Under dwish(R, df) with df=5 and p=4, the marginal prior on each variance
+# is InvGamma(shape=(df-p+1)/2, scale=R_ii/2) = InvGamma(1, R_ii/2).
+# Median of InvGamma(1, b) = b/log(2).
+# To match the dunif(0, 1e3) median of 500: R_ii = 2 * 500 * log(2) = 1e3*log(2).
+wishart.R  <- diag(1e3 * log(2), 4)  # median variance ~500, matching dunif(0, 1e3)
 
 model.data <- list(
   n.blocks  = length(blocks),
@@ -90,7 +92,9 @@ model.data <- list(
   wishart.R  = wishart.R,
   # Residual Wishart (2x2 for trunk/tail only)
   resid.wishart.df = 3,                   # df >= p = 2
-  resid.wishart.R  = diag(3, 2)
+  # Same calibration: InvGamma(1, R_ii/2), median = R_ii/(2*log(2)) = 500
+  # => R_ii = 1e3 * log(2)
+  resid.wishart.R  = diag(1e3 * log(2), 2)
 )
 
 
