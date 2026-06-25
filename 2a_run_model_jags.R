@@ -7,10 +7,10 @@ start.time <- Sys.time()
 
 # ---- MCMC parameters
 chains <- 6 #50
-adapt <- 1000
-burnin <- 50000 #500000
-total.sample <- 1000 #5000 
-thin <- 1 #7000
+adapt <- 5000
+burnin <- 5000
+total.sample <- 5000 
+thin <- 10 #1000
 
 
 # Load data ---------------------------------------------------------------
@@ -474,7 +474,10 @@ sg <- sg |>
         sg.pct = sum(sg.pct), 
         .groups = 'drop'
       ) |> 
-      mutate(W = 'Total')
+      mutate(
+        W = 'Total',
+        z.W = paste0(z, ' : ', W)
+      )
   )
 
 # genetic selection gradient
