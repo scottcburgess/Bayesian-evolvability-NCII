@@ -7,10 +7,10 @@ start.time <- Sys.time()
 
 # ---- MCMC parameters --------------------------------------------------------
 chains       <- 6  #50
-adapt        <- 1000 #5000    # longer adapt so JAGS tunes the Wishart sampler
+adapt        <- 1000 #5000 
 burnin       <- 1000  #50000
 total.sample <- 1000
-thin         <- 1000 #100     # increase further if autocorr.plot() shows residual AC
+thin         <- 1000 #100
 
 
 # Load data -------------------------------------------------------------------
