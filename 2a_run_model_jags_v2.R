@@ -6,11 +6,11 @@ source('0_misc_funcs.R')
 start.time <- Sys.time()
 
 # ---- MCMC parameters --------------------------------------------------------
-chains       <- 6  #50
+chains       <- 3  #50
 adapt        <- 1000 #5000 
 burnin       <- 1000  #50000
 total.sample <- 1000
-thin         <- 1000 #100
+thin         <- 1 #1000
 
 
 # Load data -------------------------------------------------------------------
@@ -377,79 +377,143 @@ e.params_beta <- do.call(
 rownames(e.params_beta) <- NULL
 
 
-# Selection differentials -----------------------------------------------------
+# Compute the selection differentials from the covariance -----------------------
 
 sg.df <- expand.grid(
-  z = c('Trunk', 'Tail'),
+  z = c('Trunk', 'Tail'), 
   W = c('Hatch', 'Settle|Hatch'),
   stringsAsFactors = FALSE
-) |>
+) |> 
   mutate(z.W = paste0(z, ' : ', W))
 
 sg <- lapply(1:nrow(sg.df), function(i) {
   sg.i <- sapply(1:dim(block.mean.obs)[2], function(b) {
+    # delta z = cov(z,W)/mean(W) = R = sg (in units of microns)
     va.obs[sg.df$z[i], sg.df$W[i], b, ] / block.mean.obs[sg.df$W[i], b, ]
-  }) |> t()
-
-  sg.i |>
-    as.data.frame() |>
-    setNames(1:ncol(sg.i)) |>
-    mutate(block = blocks) |>
-    pivot_longer(-block, names_to = 'sample', values_to = 'sg') |>
-    mutate(z = sg.df$z[i], W = sg.df$W[i], z.W = sg.df$z.W[i]) |>
+  }) |> 
+    t() 
+  
+  sg.i |> 
+    as.data.frame() |> 
+    setNames(1:ncol(sg.i)) |> 
+    mutate(block = blocks) |> 
+    pivot_longer(-block, names_to = 'sample', values_to = 'sg') |> 
+    mutate(
+      z = sg.df$z[i],
+      W = sg.df$W[i],
+      z.W = sg.df$z.W[i]
+    ) |>
     left_join(
-      p$block.mean[, sg.df$z[i], ] |>
-        as.data.frame() |>
-        setNames(1:dim(p$block.mean)[3]) |>
-        mutate(block = blocks) |>
+      p$block.mean[, sg.df$z[i], ] |> 
+        as.data.frame() |> 
+        setNames(1:dim(p$block.mean)[3]) |> 
+        mutate(block = blocks) |> 
         pivot_longer(-block, names_to = 'sample', values_to = 'block.mean'),
       by = c('block', 'sample')
-    ) |>
+    ) |> 
+    # delta z / mean(z) = sg / mean(z) (in units of percent)
     mutate(sg.pct = 100 * sg / block.mean)
-}) |>
+}) |> 
+  bind_rows()
+
+# Add total response to selection
+sg <- sg |> 
+  bind_rows(
+    sg |> 
+      group_by(block, sample, z) |> 
+      summarize(
+        sg = sum(sg),
+        block.mean = mean(block.mean),
+        sg.pct = sum(sg.pct), 
+        .groups = 'drop'
+      ) |> 
+      mutate(
+        W = 'Total',
+        z.W = paste0(z, ' : ', W)
+      )
+  )
+
+# genetic selection gradient
+# beta_g = G^-1 * s_g
+traits <- unique(sg$z)
+beta_g <- lapply(unique(sg$W), function(w) {
+  lapply(dimnames(va.obs)[[3]], function(b) {
+    sg.w.b <- sg |> 
+      filter(block == b, W == w) |> 
+      select(sample, z, sg) |> 
+      pivot_wider(names_from = 'z', values_from = 'sg') |> 
+      arrange(sample) |> 
+      select(-sample) |> 
+      as.matrix()
+    
+    sapply(1:dim(sg.w.b)[1], function(i) {
+      if(any(is.na(sg.w.b[i, traits]))) return(setNames(c(NA, NA), traits))
+      solve(va.obs[traits, traits, b, i], sg.w.b[i, traits])
+    }) |> 
+      t() |> 
+      as.data.frame() |> 
+      mutate(W = w, block = b) |> 
+      select(W, block, everything())
+  })
+}) |> 
   bind_rows()
 
 
-# CODA summary ----------------------------------------------------------------
+
+# CODA summary ------------------------------------------------------------
 
 post.smry <- smrzPost(
-  post,
+  post, 
   c('deviance', 'sire.vcov', 'dam.vcov', 'int.vcov', 'resid.vcov')
 )
 
 
-# Posterior Predictive Check --------------------------------------------------
+# Posterior Predictive Check ----------------------------------------------
 
 ppc <- bind_rows(
-  data.frame(metric = rep('Trunk',        nrow(model.data$length1))),
-  data.frame(metric = rep('Tail',         nrow(model.data$length1))),
-  data.frame(metric = rep('Hatch',        length(model.data$hatch))),
+  data.frame(metric = rep('Trunk', nrow(model.data$length1))),
+  data.frame(metric = rep('Tail', nrow(model.data$length1))),
+  data.frame(metric = rep('Hatch', length(model.data$hatch))),
   data.frame(metric = rep('Settle|Hatch', length(model.data$settle_hatch)))
-) |>
+) |> 
   mutate(id = 1:n(), .by = metric)
 
 ppc <- cbind(ppc, sapply(1:nrow(ppc), function(i) {
-  m  <- ppc$metric[i]
+  m <- ppc$metric[i]
   id <- ppc$id[i]
+  
   x <- switch(
     m,
-    Hatch          = list(obs = model.data$hatch[id],        ppd = p$hatch.ppd[id, ]),
-    'Settle|Hatch' = list(obs = model.data$settle_hatch[id], ppd = p$settle_hatch.ppd[id, ]),
-    list(obs = model.data$length1[id, m], ppd = p$length.ppd[id, m, ])
+    Hatch = list(obs = model.data$hatch[id], ppd = p$hatch.ppd[id, ]),
+    'Settle|Hatch' = list(
+      obs = model.data$settle_hatch[id], 
+      ppd = p$settle_hatch.ppd[id, ]
+    ),
+    list(
+      obs = model.data$length1[id, m],
+      ppd = p$length.ppd[id, m, ]
+    )
   )
-  c(pct.gte.obs = mean(x$obs >= x$ppd, na.rm = TRUE),
-    mean.diff   = mean(x$obs  - x$ppd, na.rm = TRUE))
-}) |> t())
+  
+  c(
+    pct.gte.obs = mean(x$obs >= x$ppd, na.rm = TRUE), 
+    mean.diff = mean(x$obs - x$ppd, na.rm = TRUE)
+  )
+}) |>
+  t()
+)
 
 ppc.smry <- smrzPPC(ppc)
 
 
-# Save ------------------------------------------------------------------------
+# Save all objects --------------------------------------------------------
 
-save.image(format(end.time, 'Model_outputs/posterior_%Y%m%d_%H%M.rdata', tz = 'GMT'))
+end.time <- if(exists('end.time')) end.time else Sys.time()
+post.file <- format(end.time, 'posterior_%Y%m%d_%H%M.rdata', tz = 'GMT')
+save.image(file.path('Model_outputs', post.file))
 
 
-# Plots -----------------------------------------------------------------------
+# Plot posterior distributions --------------------------------------------
 
 plot(
   post,
@@ -457,7 +521,10 @@ plot(
   file = format(end.time, 'Model_outputs/plots_%Y%m%d_%H%M.pdf', tz = 'GMT')
 )
 
-pdf(format(end.time, 'Model_outputs/diagnostics_%Y%m%d_%H%M.pdf', tz = 'GMT'))
+
+# Plot diagnostics --------------------------------------------------------
+
+pdf(format(end.time, "Model_outputs/diagnostics_%Y%m%d_%H%M.pdf", tz = 'GMT'))
 
 ggplot(post.smry$post) +
   geom_histogram(aes(values), bins = 20) +
@@ -466,26 +533,33 @@ ggplot(post.smry$post) +
 ggplot(ppc) +
   geom_histogram(aes(pct.gte.obs), binwidth = 0.05) +
   geom_vline(aes(xintercept = median.pct), data = ppc.smry, color = 'red') +
-  geom_vline(aes(xintercept = lower.pct),  data = ppc.smry, linetype = 'dashed', color = 'red') +
-  geom_vline(aes(xintercept = upper.pct),  data = ppc.smry, linetype = 'dashed', color = 'red') +
+  geom_vline(aes(xintercept = lower.pct), data = ppc.smry, linetype = 'dashed', color = 'red') +
+  geom_vline(aes(xintercept = upper.pct), data = ppc.smry, linetype = 'dashed', color = 'red') +
   facet_wrap(~ metric, scales = 'free') +
   labs(x = 'Percent of PPD >= Observed', y = 'Count')
 
 ggplot(ppc) +
   geom_histogram(aes(mean.diff), bins = 50) +
   geom_vline(aes(xintercept = median.diff), data = ppc.smry, color = 'red') +
-  geom_vline(aes(xintercept = lower.diff),  data = ppc.smry, linetype = 'dashed', color = 'red') +
-  geom_vline(aes(xintercept = upper.diff),  data = ppc.smry, linetype = 'dashed', color = 'red') +
+  geom_vline(aes(xintercept = lower.diff), data = ppc.smry, linetype = 'dashed', color = 'red') +
+  geom_vline(aes(xintercept = upper.diff), data = ppc.smry, linetype = 'dashed', color = 'red') +
   facet_wrap(~ metric, scales = 'free') +
   labs(x = 'Metric Difference (Observed - PPD)', y = 'Count')
 
 dev.off()
 
 
+rmarkdown::render(
+  'posterior_summary.Rmd',
+  params = list(posterior_file = post.file),
+  output_file = format(end.time, 'Figures and Tables/posterior_summary_%Y%m%d_%H%M.html', tz = 'GMT')
+)
+
+
 cat(
-  'Run start:     ', format(start.time, tz = 'GMT'), '\n',
-  'Run end:       ', format(end.time,   tz = 'GMT'), '\n',
+  'Run start: ', format(start.time, tz = 'GMT'), '\n',
+  'Run end: ', format(end.time, tz = 'GMT'), '\n',
   'Model elapsed: ', format(swfscMisc::autoUnits(post$timetaken)), '\n',
-  'Run elapsed:   ', format(difftime(end.time, start.time)), '\n',
+  'Run elapsed: ', format(difftime(end.time, start.time)), '\n',
   sep = ''
 )

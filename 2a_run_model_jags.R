@@ -5,12 +5,14 @@ source('0_misc_funcs.R')
 
 start.time <- Sys.time()
 
+
 # ---- MCMC parameters
-chains <- 6 #50
+
+chains <- 3 #50
 adapt <- 5000
 burnin <- 5000
 total.sample <- 5000 
-thin <- 10 #1000
+thin <- 10 #5000
 
 
 # Load data ---------------------------------------------------------------
@@ -247,7 +249,8 @@ dimnames(p$sire.vcov)[1:2] <-
   dimnames(p$dam.vcov)[1:2] <-
   dimnames(p$int.vcov)[1:2] <- 
   dimnames(p$resid.vcov)[1:2] <- list(names.4, names.4)
-dimnames(p$overall.mean)[[1]] <- names.2
+dimnames(p$overall.mean)[[1]] <-
+  dimnames(p$length.ppd)[[2]] <- names.2
 dimnames(p$block.mean)[[2]] <- 
   dimnames(p$sire.mean)[[1]] <- 
   dimnames(p$dam.mean)[[1]] <- 
@@ -255,7 +258,6 @@ dimnames(p$block.mean)[[2]] <-
   dimnames(p$sire.eff)[[2]] <- 
   dimnames(p$dam.eff)[[2]] <-
   dimnames(p$int.eff)[[2]] <- names.4
-dimnames(p$length.ppd)[[2]] <- names.2
 dimnames(p$block.mean)[[1]] <- blocks
 dimnames(p$sire.eff)[[1]] <- sires
 dimnames(p$dam.eff)[[1]] <- dams
@@ -286,6 +288,7 @@ qgparams.post <- parallel::mclapply(1:dim(p$VA)[3], function(i) {
   VP <- p$VP[, , i]
   # iterate over blocks
   lapply(1:dim(p$block.mean)[1], function(b) {
+    print(b)
     mu <- p$block.mean[b, , i]
     # identify metrics without this block
     not.missing <- which(!is.na(mu))
@@ -390,8 +393,8 @@ e.params_BetaMCMC <- evolvability::evolvabilityBetaMCMC(
 B <- matrix(
   c(
     c(0, 1), # strong selection for long tails only, 
-    c(-(1/sqrt(2)), -(1/sqrt(2))), # strong selection for short trunks and short tails
-    c((1/sqrt(2)), -(1/sqrt(2))) # strong selection for large trunks and small tails
+    c(-(1 / sqrt(2)), -(1 / sqrt(2))), # strong selection for short trunks and short tails
+    c((1 / sqrt(2)), -(1 / sqrt(2))) # strong selection for large trunks and small tails
   ), 
   nrow = 2, 
   ncol = 3
@@ -430,8 +433,7 @@ sg.df <- expand.grid(
   z = c('Trunk', 'Tail'), 
   W = c('Hatch', 'Settle|Hatch'),
   stringsAsFactors = FALSE
-) |> 
-  mutate(z.W = paste0(z, ' : ', W))
+)
 
 sg <- lapply(1:nrow(sg.df), function(i) {
   sg.i <- sapply(1:dim(block.mean.obs)[2], function(b) {
@@ -447,8 +449,7 @@ sg <- lapply(1:nrow(sg.df), function(i) {
     pivot_longer(-block, names_to = 'sample', values_to = 'sg') |> 
     mutate(
       z = sg.df$z[i],
-      W = sg.df$W[i],
-      z.W = sg.df$z.W[i]
+      W = sg.df$W[i]
     ) |>
     left_join(
       p$block.mean[, sg.df$z[i], ] |> 
@@ -474,11 +475,9 @@ sg <- sg |>
         sg.pct = sum(sg.pct), 
         .groups = 'drop'
       ) |> 
-      mutate(
-        W = 'Total',
-        z.W = paste0(z, ' : ', W)
-      )
-  )
+      mutate(W = 'Total')
+  ) |> 
+  mutate(z.W = paste0(z, ' : ', W))
 
 # genetic selection gradient
 # beta_g = G^-1 * s_g
@@ -504,7 +503,6 @@ beta_g <- lapply(unique(sg$W), function(w) {
   })
 }) |> 
   bind_rows()
-
 
 
 # CODA summary ------------------------------------------------------------
