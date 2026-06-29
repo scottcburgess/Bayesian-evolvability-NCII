@@ -597,7 +597,7 @@ dev.off()
 rmarkdown::render(
   'posterior_summary.Rmd',
   params = list(posterior_file = post.file),
-  output_file = format(end.time, 'Figures and Tables/posterior_summary_%Y%m%d_%H%M.html', tz = 'GMT')
+  output_file = format(end.time, 'Figures_and_Tables/posterior_summary_%Y%m%d_%H%M.html', tz = 'GMT')
 )
 
 

@@ -3,7 +3,7 @@ library('tidyverse')
 library('ggridges')
 
 # Trunk Tail: load and prepare ----
-load("Model_outputs/posterior_20260622_0449.rdata")
+load("Model_outputs/posterior_20260627_0716.rdata")
 
 source('0_misc_funcs.R')
 
@@ -50,7 +50,7 @@ fig2
 
 # Save plot ----
 ggsave(
-  "Figures and Tables/Figure 2.pdf", 
+  "Figures_and_Tables/Figure 2.pdf", 
   plot = fig2, 
   height = 4, 
   width = 3
