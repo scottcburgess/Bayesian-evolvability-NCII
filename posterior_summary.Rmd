@@ -398,8 +398,9 @@ e.params_beta |>
 sg |> 
   filter(!is.na(sg.pct)) |> 
   mutate(z.W = factor(z.W, levels = unique(z.W))) |> 
-  select(sg.pct, z.W) |>
-  group_by(z.W) |> 
+  rename(Param = 'z.W') |> 
+  select(sg.pct, Param) |>
+  group_by(Param) |> 
   summarise(
     stats = list(vecSmry(sg.pct)),
     .groups = "drop"
