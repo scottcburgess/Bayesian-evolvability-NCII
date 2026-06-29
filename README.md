@@ -15,6 +15,7 @@ Powell JA, Archer FI, Burgess SC. In Prep. Evolvability of marine dispersal trai
 
 Additional packages needed to summarize and plot the posteriors of the model <br />
 `modeest` <br />
+`HDInterval` <br />
 `ggridges` <br />
 `pander` <br />
 `gridExtra` <br />
