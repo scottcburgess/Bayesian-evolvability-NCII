@@ -2,7 +2,7 @@ rm(list = ls())
 library(tidyverse)
 source('0_misc_funcs.R')
 
-load("Model_outputs/posterior_20260622_0449.rdata")
+load("Model_outputs/posterior_20260627_0716.rdata")
 
 param.df <- param_df |> 
   mutate(
@@ -151,7 +151,7 @@ fig3 <- ellipses |>
 fig3
 
 ggsave(
-  "Figures and Tables/Figure 3.pdf",
+  "Figures_and_Tables/Figure 3.pdf",
   plot = fig3,
   height = 5,
   width = 5

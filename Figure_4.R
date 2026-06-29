@@ -4,7 +4,7 @@ library('tidyverse')
 library('ggridges')
 
 # trunk Tail: load and prepare ----
-load("Model_outputs/posterior_20260622_0449.rdata") 
+load("Model_outputs/posterior_20260627_0716.rdata") 
 
 source('0_misc_funcs.R')
 
@@ -21,7 +21,7 @@ E_trunk_tail <- lapply(betas, function(b) {
 fig4 <- E_trunk_tail |> 
   rename(value = 'beta') |> 
   plot_func(
-    bw = 0.00001, 
+    bw = 0.000015, 
     breaks = seq(0, 0.05, 0.0001), 
     max_x = 0.0008,
     param_df = param_df
@@ -36,7 +36,7 @@ fig4
 
 
 ggsave(
-  "Figures and Tables/Figure 4.pdf", 
+  "Figures_and_Tables/Figure 4.pdf", 
   plot = fig4, 
   height = 3, 
   width = 3
