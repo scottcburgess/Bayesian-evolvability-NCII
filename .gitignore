@@ -6,9 +6,10 @@
 .httr-oauth
 .quarto
 *.rdata
-*.html
+# *.html
 Model_outputs/*.pdf
 Manuscript/
 old/
 _extra/
 .positai
+Literature/
