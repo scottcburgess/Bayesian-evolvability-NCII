@@ -397,12 +397,11 @@ e.params_beta |>
 ```{r}
 sg |> 
   filter(!is.na(sg.pct)) |> 
-  rename(value = 'sg.pct', param = z.W) |> 
-  mutate(param = factor(param, levels = rev(sg.df$z.W))) |> 
-  select(value, param) |>
-  group_by(param) |> 
+  mutate(z.W = factor(z.W, levels = unique(z.W))) |> 
+  select(sg.pct, z.W) |>
+  group_by(z.W) |> 
   summarise(
-    stats = list(vecSmry(value)),
+    stats = list(vecSmry(sg.pct)),
     .groups = "drop"
   ) |> 
   tidyr::unnest_wider(stats) |> 
