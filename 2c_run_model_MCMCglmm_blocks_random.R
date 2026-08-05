@@ -1,5 +1,3 @@
-# This is Model I converted to MCMCglmm, for comparison
-# but has block as a random effect
 rm(list = ls())
 library(MCMCglmm)
 

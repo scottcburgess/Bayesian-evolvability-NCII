@@ -7,7 +7,7 @@
 .quarto
 *.rdata
 # *.html
-Model_outputs/*.pdf
+# Model_outputs/*.pdf
 Manuscript/
 old/
 _extra/

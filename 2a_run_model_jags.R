@@ -8,11 +8,11 @@ start.time <- Sys.time()
 
 # ---- MCMC parameters
 
-chains <- 3 #50
+chains <- 50 #3
 adapt <- 5000
 burnin <- 5000
 total.sample <- 5000 
-thin <- 10 #5000
+thin <- 5000 #10
 
 
 # Load data ---------------------------------------------------------------

@@ -1,4 +1,3 @@
-# This is Model I converted to MCMCglmm, for comparison
 rm(list = ls())
 library(MCMCglmm)
 
